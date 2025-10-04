@@ -1,6 +1,19 @@
 (function () {
   "use strict";
 
+  const API_BASE = new URL("./", window.location.href);
+
+  function getApiBasePath() {
+    return API_BASE.pathname.replace(/\/$/, "");
+  }
+
+  function buildApiUrl(path) {
+    const normalized = typeof path === "string" && path.startsWith("/")
+      ? path.slice(1)
+      : path || "";
+    return new URL(normalized, API_BASE).toString();
+  }
+
   function createElement(tag, options = {}) {
     const element = document.createElement(tag);
     if (options.className) {
@@ -28,7 +41,7 @@
   }
 
   async function fetchQuestions() {
-    const response = await fetch("/api/questions");
+    const response = await fetch(buildApiUrl("api/questions"));
     if (!response.ok) {
       throw new Error("Kon vragen niet laden");
     }
@@ -94,6 +107,11 @@
     const table = document.getElementById("questions-table");
     const emptyState = document.getElementById("questions-empty");
     const feedback = document.getElementById("questions-feedback");
+
+    // Zorg dat de API-basis ook beschikbaar is voor andere scripts indien nodig.
+    if (!window.__CHAT_SPEL_API_BASE_PATH__) {
+      window.__CHAT_SPEL_API_BASE_PATH__ = getApiBasePath();
+    }
 
     fetchQuestions()
       .then((questions) => {

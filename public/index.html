@@ -21,8 +21,18 @@
           container.textContent = "Quiz wordt geladen...";
         }
 
+        const baseUrl = new URL("./", window.location.href);
+        const apiBasePath = baseUrl.pathname.replace(/\/$/, "");
+        if (!window.__CHAT_SPEL_API_BASE_PATH__) {
+          window.__CHAT_SPEL_API_BASE_PATH__ = apiBasePath;
+        }
+        const buildApiUrl = (path) => {
+          const normalized = path.startsWith("/") ? path.slice(1) : path;
+          return new URL(normalized, baseUrl).toString();
+        };
+
         try {
-          const response = await fetch("/api/quiz-config");
+          const response = await fetch(buildApiUrl("api/quiz-config"));
           if (!response.ok) {
             throw new Error("Kon configuratie niet laden");
           }
@@ -30,7 +40,7 @@
           new DigitalSafetyQuiz({
             container: "#quiz",
             config,
-            apiBaseUrl: ""
+            apiBaseUrl: apiBasePath
           });
         } catch (error) {
           if (container) {
