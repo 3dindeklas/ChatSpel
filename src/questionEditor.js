@@ -1,17 +1,32 @@
 (function () {
   "use strict";
 
-  const API_BASE = new URL("./", window.location.href);
+  const PAGE_BASE = new URL("./", window.location.href);
+
+  function normalizeBasePath(path) {
+    if (!path || path === "/") {
+      return "";
+    }
+    return path.replace(/\/+$/, "");
+  }
 
   function getApiBasePath() {
-    return API_BASE.pathname.replace(/\/$/, "");
+    if (typeof window.__CHAT_SPEL_API_BASE_PATH__ === "string") {
+      return normalizeBasePath(window.__CHAT_SPEL_API_BASE_PATH__);
+    }
+    return normalizeBasePath(PAGE_BASE.pathname);
+  }
+
+  function getApiBaseUrl() {
+    const basePath = getApiBasePath();
+    const normalized = basePath ? `${basePath}/` : "";
+    return new URL(normalized, PAGE_BASE.origin);
   }
 
   function buildApiUrl(path) {
-    const normalized = typeof path === "string" && path.startsWith("/")
-      ? path.slice(1)
-      : path || "";
-    return new URL(normalized, API_BASE).toString();
+    const base = getApiBaseUrl();
+    const normalized = (path || "").toString().replace(/^\/+/, "");
+    return new URL(normalized, base).toString();
   }
 
   function $(selector) {
