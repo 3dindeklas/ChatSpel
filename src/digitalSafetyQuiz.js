@@ -158,6 +158,374 @@
     return el;
   }
 
+  function storageAvailable(type = "localStorage") {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    try {
+      const storage = window[type];
+      const testKey = "__dsq_storage_test__";
+      storage.setItem(testKey, testKey);
+      storage.removeItem(testKey);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function generateId(prefix = "id") {
+    const basePrefix = prefix ? `${prefix}-` : "";
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+      return `${basePrefix}${crypto.randomUUID()}`;
+    }
+    const randomPart = Math.random().toString(36).slice(2);
+    return `${basePrefix}${Date.now().toString(36)}-${randomPart}`;
+  }
+
+  const SESSION_EVENT_NAME = "dsq:sessions-updated";
+
+  class DailySessionStore {
+    constructor(options = {}) {
+      this.prefix = options.prefix || "digitalSafetyQuiz:sessions";
+      this.storageEnabled = storageAvailable("localStorage");
+      this.memoryStore = {};
+      this.sessionIndex = {};
+      this._rebuildIndex();
+    }
+
+    _getDateKey(date = new Date()) {
+      return `${this.prefix}:${date.toISOString().slice(0, 10)}`;
+    }
+
+    _readByKey(dateKey) {
+      if (!dateKey) {
+        return { sessions: [] };
+      }
+
+      if (this.storageEnabled) {
+        const raw = window.localStorage.getItem(dateKey);
+        if (!raw) {
+          return { sessions: [] };
+        }
+        try {
+          return JSON.parse(raw);
+        } catch (error) {
+          return { sessions: [] };
+        }
+      }
+
+      if (!this.memoryStore[dateKey]) {
+        this.memoryStore[dateKey] = { sessions: [] };
+      }
+
+      return JSON.parse(JSON.stringify(this.memoryStore[dateKey]));
+    }
+
+    _saveByKey(dateKey, data) {
+      const serialized = JSON.stringify(data);
+      if (this.storageEnabled) {
+        window.localStorage.setItem(dateKey, serialized);
+      } else {
+        this.memoryStore[dateKey] = JSON.parse(serialized);
+      }
+      this._indexSessions(dateKey, data.sessions);
+      this._broadcastChange();
+    }
+
+    _indexSessions(dateKey, sessions = []) {
+      sessions.forEach((session) => {
+        if (session && session.id) {
+          this.sessionIndex[session.id] = dateKey;
+        }
+      });
+    }
+
+    _rebuildIndex() {
+      const todayKey = this._getDateKey();
+      const data = this._readByKey(todayKey);
+      this._indexSessions(todayKey, data.sessions);
+    }
+
+    _getSession(dateKey, sessionId) {
+      const data = this._readByKey(dateKey);
+      const session = data.sessions.find((entry) => entry.id === sessionId);
+      return { data, session };
+    }
+
+    _broadcastChange() {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent(SESSION_EVENT_NAME));
+      }
+    }
+
+    createSession(name) {
+      const now = new Date();
+      const dateKey = this._getDateKey(now);
+      const data = this._readByKey(dateKey);
+      const session = {
+        id: generateId("session"),
+        dateKey,
+        name,
+        startTime: now.toISOString(),
+        status: "active",
+        attempts: [],
+        stats: { correct: 0, incorrect: 0 },
+        summary: null,
+        lastUpdated: now.toISOString()
+      };
+
+      data.sessions.push(session);
+      this._saveByKey(dateKey, data);
+      return session;
+    }
+
+    recordAttempt(sessionId, attempt) {
+      if (!sessionId) {
+        return null;
+      }
+
+      const dateKey = this.sessionIndex[sessionId] || this._getDateKey();
+      const { data, session } = this._getSession(dateKey, sessionId);
+      if (!session) {
+        return null;
+      }
+
+      if (!Array.isArray(session.attempts)) {
+        session.attempts = [];
+      }
+      session.attempts.push({ ...attempt });
+
+      session.stats = session.stats || { correct: 0, incorrect: 0 };
+      if (attempt.isCorrect) {
+        session.stats.correct += 1;
+      } else {
+        session.stats.incorrect += 1;
+      }
+
+      session.lastUpdated = new Date().toISOString();
+      this._saveByKey(dateKey, data);
+      return session;
+    }
+
+    completeSession(sessionId, summary) {
+      if (!sessionId) {
+        return null;
+      }
+
+      const dateKey = this.sessionIndex[sessionId] || this._getDateKey();
+      const { data, session } = this._getSession(dateKey, sessionId);
+      if (!session) {
+        return null;
+      }
+
+      session.status = "completed";
+      session.summary = summary;
+      session.endTime = new Date().toISOString();
+      session.lastUpdated = session.endTime;
+
+      this._saveByKey(dateKey, data);
+      return session;
+    }
+
+    getSnapshot() {
+      const todayKey = this._getDateKey();
+      const data = this._readByKey(todayKey);
+      const activeSessions = data.sessions.filter(
+        (session) => session.status === "active"
+      );
+
+      const totals = data.sessions.reduce(
+        (acc, session) => {
+          const stats = session.stats || { correct: 0, incorrect: 0 };
+          acc.correct += stats.correct;
+          acc.incorrect += stats.incorrect;
+          if (session.status === "active") {
+            acc.activeParticipants += 1;
+          }
+          return acc;
+        },
+        { correct: 0, incorrect: 0, activeParticipants: 0 }
+      );
+
+      return {
+        dateKey: todayKey,
+        totals,
+        activeSessions: activeSessions.map((session) => ({
+          id: session.id,
+          name: session.name,
+          correct: session.stats?.correct || 0,
+          incorrect: session.stats?.incorrect || 0,
+          startTime: session.startTime
+        })),
+        totalSessions: data.sessions.length
+      };
+    }
+  }
+
+  class DashboardView {
+    constructor(container, store) {
+      this.container = container;
+      this.store = store;
+      this.elements = {};
+      this.render();
+      this.update();
+
+      this.handleUpdate = this.update.bind(this);
+      if (typeof window !== "undefined") {
+        window.addEventListener(SESSION_EVENT_NAME, this.handleUpdate);
+        window.addEventListener("storage", this.handleUpdate);
+      }
+    }
+
+    render() {
+      this.container.innerHTML = "";
+      this.container.classList.add("dsq-dashboard");
+
+      const title = createElement("h2", {
+        className: "dsq-dashboard-title",
+        text: "Live dashboard"
+      });
+      const dateEl = createElement("p", {
+        className: "dsq-dashboard-date"
+      });
+
+      const metricsWrapper = createElement("div", {
+        className: "dsq-dashboard-metrics"
+      });
+
+      const participantMetric = this._createMetric(
+        "Actieve deelnemers",
+        "0"
+      );
+      const correctMetric = this._createMetric("Goede antwoorden", "0");
+      const incorrectMetric = this._createMetric("Foute antwoorden", "0");
+
+      metricsWrapper.append(
+        participantMetric.wrapper,
+        correctMetric.wrapper,
+        incorrectMetric.wrapper
+      );
+
+      const sessionTitle = createElement("h3", {
+        className: "dsq-dashboard-subtitle",
+        text: "Actieve sessies"
+      });
+      const sessionList = createElement("ul", {
+        className: "dsq-dashboard-session-list"
+      });
+
+      this.container.append(title, dateEl, metricsWrapper, sessionTitle, sessionList);
+
+      this.elements.date = dateEl;
+      this.elements.participants = participantMetric.valueEl;
+      this.elements.correct = correctMetric.valueEl;
+      this.elements.incorrect = incorrectMetric.valueEl;
+      this.elements.sessionList = sessionList;
+    }
+
+    _createMetric(label, value) {
+      const wrapper = createElement("div", {
+        className: "dsq-dashboard-metric"
+      });
+      const valueEl = createElement("span", {
+        className: "dsq-dashboard-metric-value",
+        text: value
+      });
+      const labelEl = createElement("span", {
+        className: "dsq-dashboard-metric-label",
+        text: label
+      });
+      wrapper.append(valueEl, labelEl);
+      return { wrapper, valueEl, labelEl };
+    }
+
+    update() {
+      if (!this.store) {
+        return;
+      }
+
+      const snapshot = this.store.getSnapshot();
+      const dateKey = snapshot.dateKey.split(":").pop();
+      this.elements.date.textContent = `Vandaag: ${this._formatDate(dateKey)}`;
+      this.elements.participants.textContent = String(
+        snapshot.totals.activeParticipants || 0
+      );
+      this.elements.correct.textContent = String(snapshot.totals.correct || 0);
+      this.elements.incorrect.textContent = String(
+        snapshot.totals.incorrect || 0
+      );
+
+      this._renderSessions(snapshot.activeSessions);
+    }
+
+    _renderSessions(sessions = []) {
+      const list = this.elements.sessionList;
+      list.innerHTML = "";
+
+      if (!sessions.length) {
+        list.append(
+          createElement("li", {
+            className: "dsq-dashboard-session-empty",
+            text: "Geen actieve sessies"
+          })
+        );
+        return;
+      }
+
+      sessions.forEach((session) => {
+        const item = createElement("li", {
+          className: "dsq-dashboard-session-item"
+        });
+
+        const nameEl = createElement("span", {
+          className: "dsq-dashboard-session-name",
+          text: session.name || "Onbekend"
+        });
+        const statsEl = createElement("span", {
+          className: "dsq-dashboard-session-stats",
+          text: `${session.correct} goed • ${session.incorrect} fout`
+        });
+        const timeEl = createElement("span", {
+          className: "dsq-dashboard-session-time",
+          text: `Gestart om ${this._formatTime(session.startTime)}`
+        });
+
+        item.append(nameEl, statsEl, timeEl);
+        list.append(item);
+      });
+    }
+
+    _formatDate(dateString) {
+      if (!dateString) {
+        return "-";
+      }
+      const [year, month, day] = dateString.split("-");
+      return `${day}-${month}-${year}`;
+    }
+
+    _formatTime(timeString) {
+      if (!timeString) {
+        return "--:--";
+      }
+      const date = new Date(timeString);
+      if (Number.isNaN(date.getTime())) {
+        return "--:--";
+      }
+      return date.toLocaleTimeString("nl-NL", {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    destroy() {
+      if (typeof window !== "undefined") {
+        window.removeEventListener(SESSION_EVENT_NAME, this.handleUpdate);
+        window.removeEventListener("storage", this.handleUpdate);
+      }
+    }
+  }
+
   function normalizeConfig(userConfig = {}) {
     const config = JSON.parse(JSON.stringify(defaultConfig));
     if (!userConfig) {
@@ -188,6 +556,11 @@
           "DigitalSafetyQuiz: kon de container niet vinden. Geef een element of CSS-selector door."
         );
       }
+      this.sessionStore = new DailySessionStore();
+      this.sessionId = null;
+      this.sessionResults = new Map();
+      this.participantName = "";
+      this.sessionCompleted = false;
       this.currentModuleIndex = -1;
       this.currentQuestionIndex = -1;
       this.score = 0;
@@ -226,6 +599,10 @@
     renderIntro() {
       this.mainEl.innerHTML = "";
       this.footerEl.innerHTML = "";
+      this.sessionId = null;
+      this.sessionResults = new Map();
+      this.participantName = "";
+      this.sessionCompleted = false;
 
       const introCard = createElement("section", {
         className: "dsq-card dsq-intro"
@@ -237,20 +614,66 @@
         })
       );
 
+      const nameField = createElement("div", {
+        className: "dsq-input-group"
+      });
+      const nameLabel = createElement("label", {
+        className: "dsq-label",
+        text: "Wat is je naam?",
+        attrs: { for: "dsq-participant-name" }
+      });
+      const nameInput = createElement("input", {
+        attrs: {
+          id: "dsq-participant-name",
+          type: "text",
+          placeholder: this.config.strings.enterName,
+          "aria-label": this.config.strings.enterName,
+          autocomplete: "name"
+        },
+        className: "dsq-input"
+      });
+      nameField.append(nameLabel, nameInput);
+
       const startButton = createElement("button", {
         className: "dsq-button",
         text: this.config.strings.startButton
       });
+      startButton.disabled = true;
+
+      const updateStartButton = () => {
+        const hasName = nameInput.value.trim().length > 0;
+        startButton.disabled = !hasName;
+      };
+
+      nameInput.addEventListener("input", updateStartButton);
       startButton.addEventListener("click", () => {
-        this.startQuiz();
+        const name = nameInput.value.trim();
+        if (!name) {
+          return;
+        }
+        startButton.disabled = true;
+        this.startQuiz(name);
       });
 
-      introCard.append(startButton);
+      introCard.append(nameField, startButton);
       this.mainEl.append(introCard);
       this.updateProgress();
     }
 
-    startQuiz() {
+    startQuiz(name) {
+      if (this.sessionId) {
+        return;
+      }
+      this.participantName = (name || "").trim();
+      if (!this.participantName) {
+        return;
+      }
+
+      this.sessionResults = new Map();
+      this.sessionCompleted = false;
+      const session = this.sessionStore.createSession(this.participantName);
+      this.sessionId = session?.id || null;
+
       this.currentModuleIndex = 0;
       this.currentQuestionIndex = -1;
       this.score = 0;
@@ -362,6 +785,16 @@
         text: this.config.strings.checkAnswer,
         attrs: { type: "submit" }
       });
+      form.append(button);
+
+      const nextQuestionButton = createElement("button", {
+        className: "dsq-button dsq-button-secondary",
+        text: this.config.strings.nextQuestion,
+        attrs: { type: "button" }
+      });
+      nextQuestionButton.disabled = true;
+
+      let hasRecordedScore = false;
 
       const nextQuestionButton = createElement("button", {
         className: "dsq-button dsq-button-secondary",
@@ -374,6 +807,10 @@
 
       form.addEventListener("submit", (event) => {
         event.preventDefault();
+        if (form.classList.contains("dsq-question-locked")) {
+          return;
+        }
+
         const answers = Array.from(
           form.querySelectorAll("input:checked")
         ).map((input) => input.value);
@@ -389,6 +826,20 @@
         }
 
         const isCorrect = this.evaluateAnswer(question, answers);
+        this.handleQuestionAttempt(module, question, answers, isCorrect);
+
+        feedbackEl.textContent = isCorrect
+          ? question.feedback?.correct || this.config.strings.feedbackCorrect
+          : question.feedback?.incorrect || this.config.strings.feedbackIncorrect;
+
+        feedbackEl.classList.remove(
+          "dsq-feedback-correct",
+          "dsq-feedback-incorrect"
+        );
+        feedbackEl.classList.add(
+          isCorrect ? "dsq-feedback-correct" : "dsq-feedback-incorrect"
+        );
+
         if (isCorrect) {
           if (!hasRecordedScore) {
             this.score += 1;
@@ -424,6 +875,93 @@
       this.footerEl.append(nextQuestionButton);
 
       this.updateProgress();
+    }
+
+    handleQuestionAttempt(module, question, answers, isCorrect) {
+      if (!this.sessionResults) {
+        this.sessionResults = new Map();
+      }
+
+      const attemptRecord = this._createAttemptRecord(
+        module,
+        question,
+        answers,
+        isCorrect
+      );
+
+      this._updateSessionResults(module, question, attemptRecord);
+
+      if (this.sessionStore && this.sessionId) {
+        this.sessionStore.recordAttempt(this.sessionId, attemptRecord);
+      }
+
+      return attemptRecord;
+    }
+
+    _getAttemptCount(moduleId, questionId) {
+      const moduleResult = this.sessionResults.get(moduleId);
+      if (!moduleResult) {
+        return 0;
+      }
+      const questionResult = moduleResult.questions.get(questionId);
+      return questionResult ? questionResult.attempts.length : 0;
+    }
+
+    _createAttemptRecord(module, question, answers, isCorrect) {
+      const attemptNumber =
+        this._getAttemptCount(module.id, question.id) + 1;
+      const timestamp = new Date().toISOString();
+      const answerLabels = answers.map((answerId) => {
+        const option = question.options.find((opt) => opt.id === answerId);
+        return option ? option.label : answerId;
+      });
+
+      return {
+        id: generateId("attempt"),
+        moduleId: module.id,
+        moduleTitle: module.title,
+        questionId: question.id,
+        questionText: question.text,
+        selectedAnswers: [...answers],
+        selectedAnswerLabels: answerLabels,
+        isCorrect,
+        attemptNumber,
+        timestamp
+      };
+    }
+
+    _updateSessionResults(module, question, attemptRecord) {
+      let moduleResult = this.sessionResults.get(module.id);
+      if (!moduleResult) {
+        moduleResult = {
+          moduleId: module.id,
+          moduleTitle: module.title,
+          questions: new Map()
+        };
+        this.sessionResults.set(module.id, moduleResult);
+      }
+
+      let questionResult = moduleResult.questions.get(question.id);
+      if (!questionResult) {
+        questionResult = {
+          questionId: question.id,
+          questionText: question.text,
+          attempts: []
+        };
+        moduleResult.questions.set(question.id, questionResult);
+      }
+
+      questionResult.attempts.push({
+        attemptNumber: attemptRecord.attemptNumber,
+        selectedAnswers: [...attemptRecord.selectedAnswers],
+        selectedAnswerLabels: [...attemptRecord.selectedAnswerLabels],
+        isCorrect: attemptRecord.isCorrect,
+        timestamp: attemptRecord.timestamp
+      });
+
+      questionResult.finalCorrect = attemptRecord.isCorrect;
+      questionResult.finalAnswers = [...attemptRecord.selectedAnswers];
+      questionResult.finalAnswerLabels = [...attemptRecord.selectedAnswerLabels];
     }
 
     evaluateAnswer(question, answers) {
@@ -474,6 +1012,15 @@
       this.mainEl.innerHTML = "";
       this.footerEl.innerHTML = "";
 
+      const summary = this.getCompletionSummary();
+      if (!this.sessionCompleted && this.sessionStore && this.sessionId) {
+        this.sessionStore.completeSession(this.sessionId, summary);
+        this.sessionCompleted = true;
+      }
+
+      const summaryCard = this.buildSummaryCard(summary);
+      this.mainEl.append(summaryCard);
+
       const certificateCard = createElement("section", {
         className: "dsq-card dsq-certificate"
       });
@@ -491,6 +1038,7 @@
         },
         className: "dsq-input"
       });
+      nameInput.value = this.participantName;
 
       const certificatePreview = createElement("div", {
         className: "dsq-certificate-preview"
@@ -530,6 +1078,109 @@
       certificateCard.append(nameInput, certificatePreview, downloadButton, resetButton);
       this.mainEl.append(certificateCard);
       this.updateProgress(true);
+    }
+
+    getCompletionSummary() {
+      const modules = this.config.modules.map((module) => {
+        const moduleResult = this.sessionResults.get(module.id);
+        const questions = module.questions.map((question) => {
+          const questionResult = moduleResult?.questions?.get
+            ? moduleResult.questions.get(question.id)
+            : undefined;
+          const attempts = questionResult?.attempts?.map((attempt) => ({
+            attemptNumber: attempt.attemptNumber,
+            selectedAnswers: [...attempt.selectedAnswers],
+            selectedAnswerLabels: [...attempt.selectedAnswerLabels],
+            isCorrect: attempt.isCorrect,
+            timestamp: attempt.timestamp
+          })) || [];
+
+          return {
+            questionId: question.id,
+            questionText: question.text,
+            finalCorrect: Boolean(questionResult?.finalCorrect),
+            finalAnswerLabels: questionResult?.finalAnswerLabels || [],
+            attempts
+          };
+        });
+
+        return {
+          moduleId: module.id,
+          moduleTitle: module.title,
+          questions
+        };
+      });
+
+      return {
+        participant: this.participantName,
+        score: this.score,
+        totalQuestions: this.totalQuestions,
+        modules
+      };
+    }
+
+    buildSummaryCard(summary) {
+      const summaryCard = createElement("section", {
+        className: "dsq-card dsq-summary-card"
+      });
+
+      summaryCard.append(
+        createElement("h2", { text: "Jouw resultaten" }),
+        createElement("p", {
+          className: "dsq-summary-intro",
+          text: "Bekijk welke vragen je goed of fout hebt beantwoord."
+        }),
+        createElement("p", {
+          className: "dsq-summary-score",
+          text: `Score: ${summary.score}/${summary.totalQuestions}`
+        })
+      );
+
+      summary.modules.forEach((moduleSummary) => {
+        const moduleEl = createElement("div", {
+          className: "dsq-summary-module"
+        });
+        moduleEl.append(
+          createElement("h3", { text: moduleSummary.moduleTitle })
+        );
+
+        const list = createElement("ul", {
+          className: "dsq-summary-list"
+        });
+
+        moduleSummary.questions.forEach((questionSummary) => {
+          const item = createElement("li", {
+            className: "dsq-summary-question"
+          });
+          const statusClass = questionSummary.finalCorrect
+            ? "dsq-summary-status-correct"
+            : "dsq-summary-status-incorrect";
+          const statusText = questionSummary.finalCorrect ? "Goed" : "Fout";
+          const statusEl = createElement("span", {
+            className: `dsq-summary-status ${statusClass}`,
+            text: statusText
+          });
+          const textEl = createElement("span", {
+            className: "dsq-summary-question-text",
+            text: questionSummary.questionText
+          });
+          const answerLabels = questionSummary.finalAnswerLabels.length
+            ? questionSummary.finalAnswerLabels.join(", ")
+            : "-";
+          const answerEl = createElement("span", {
+            className: "dsq-summary-answer",
+            text: `Jouw antwoord: ${answerLabels}`
+          });
+
+          item.append(statusEl, textEl, answerEl);
+          list.append(item);
+        });
+
+        moduleEl.append(list);
+        summaryCard.append(moduleEl);
+      });
+
+      return summaryCard;
     }
 
     downloadCertificate(previewEl) {
@@ -580,6 +1231,12 @@
       `;
     }
   }
+
+  global.DSQDashboard = {
+    ...(global.DSQDashboard || {}),
+    DailySessionStore,
+    DashboardView
+  };
 
   global.DigitalSafetyQuiz = DigitalSafetyQuiz;
 })(typeof window !== "undefined" ? window : this);

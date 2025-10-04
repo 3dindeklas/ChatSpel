@@ -245,6 +245,18 @@
   outline: none;
 }
 
+.dsq-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.dsq-label {
+  font-weight: 700;
+  color: #0f172a;
+}
+
 .dsq-certificate-preview {
   margin-top: 1.5rem;
   background: #fef9c3;
@@ -269,6 +281,180 @@
 .dsq-certificate-score {
   font-size: 1rem;
   color: #7c2d12;
+}
+
+.dsq-dashboard-page {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(160deg, #0f172a, #1e3a8a 45%, #3b82f6 100%);
+  font-family: "Nunito", "Segoe UI", sans-serif;
+  padding: 2rem 1.5rem;
+  box-sizing: border-box;
+}
+
+.dsq-dashboard-wrapper {
+  width: min(960px, 100%);
+}
+
+.dsq-dashboard-page .dsq-card {
+  width: 100%;
+  margin: 0 auto;
+}
+
+.dsq-dashboard {
+  margin-bottom: 1.5rem;
+}
+
+.dsq-dashboard-title {
+  font-size: 1.25rem;
+  margin-bottom: 0.25rem;
+  color: #0f172a;
+}
+
+.dsq-dashboard-date {
+  color: #475569;
+  margin-bottom: 1rem;
+}
+
+.dsq-dashboard-metrics {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin-bottom: 1.25rem;
+}
+
+.dsq-dashboard-metric {
+  background: #f1f5f9;
+  border-radius: 16px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  box-shadow: inset 0 0 0 1px #e2e8f0;
+}
+
+.dsq-dashboard-metric-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+.dsq-dashboard-metric-label {
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.dsq-dashboard-subtitle {
+  font-size: 1.1rem;
+  margin: 1rem 0 0.5rem;
+  color: #0f172a;
+}
+
+.dsq-dashboard-session-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.dsq-dashboard-session-item {
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  background: #f8fafc;
+  box-shadow: inset 0 0 0 1px #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dsq-dashboard-session-name {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dsq-dashboard-session-stats {
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.dsq-dashboard-session-time {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.dsq-dashboard-session-empty {
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #64748b;
+  font-style: italic;
+  box-shadow: inset 0 0 0 1px #e2e8f0;
+}
+
+.dsq-summary-card {
+  margin-bottom: 1.5rem;
+}
+
+.dsq-summary-intro {
+  color: #475569;
+  margin-bottom: 0.5rem;
+}
+
+.dsq-summary-score {
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 1rem;
+}
+
+.dsq-summary-module {
+  margin-top: 1rem;
+}
+
+.dsq-summary-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.dsq-summary-question {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  background: #f8fafc;
+  box-shadow: inset 0 0 0 1px #e2e8f0;
+}
+
+.dsq-summary-status {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.dsq-summary-status-correct {
+  color: #15803d;
+}
+
+.dsq-summary-status-incorrect {
+  color: #b91c1c;
+}
+
+.dsq-summary-question-text {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.dsq-summary-answer {
+  font-size: 0.9rem;
+  color: #475569;
 }
 
 @media (max-width: 480px) {

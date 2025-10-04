@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live quizdashboard</title>
+    <link rel="stylesheet" href="../styles/digitalSafetyQuiz.css" />
+  </head>
+  <body class="dsq-dashboard-page">
+    <div class="dsq-dashboard-wrapper">
+      <section id="dashboard" class="dsq-card"></section>
+    </div>
+
+    <script src="../src/digitalSafetyQuiz.js"></script>
+    <script src="../src/quizDashboard.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        createDigitalSafetyDashboard({ container: "#dashboard" });
+      });
+    </script>
+  </body>
+</html>
