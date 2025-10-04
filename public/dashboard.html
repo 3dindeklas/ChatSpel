@@ -15,7 +15,17 @@
     <script src="../src/quizDashboard.js"></script>
     <script>
       document.addEventListener("DOMContentLoaded", function () {
-        createDigitalSafetyDashboard({ container: "#dashboard" });
+        const baseUrl = new URL("./", window.location.href);
+        const apiBasePath = baseUrl.pathname.replace(/\/$/, "");
+
+        if (!window.__CHAT_SPEL_API_BASE_PATH__) {
+          window.__CHAT_SPEL_API_BASE_PATH__ = apiBasePath;
+        }
+
+        createDigitalSafetyDashboard({
+          container: "#dashboard",
+          apiBaseUrl: apiBasePath
+        });
       });
     </script>
   </body>

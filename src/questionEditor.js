@@ -1,6 +1,19 @@
 (function () {
   "use strict";
 
+  const API_BASE = new URL("./", window.location.href);
+
+  function getApiBasePath() {
+    return API_BASE.pathname.replace(/\/$/, "");
+  }
+
+  function buildApiUrl(path) {
+    const normalized = typeof path === "string" && path.startsWith("/")
+      ? path.slice(1)
+      : path || "";
+    return new URL(normalized, API_BASE).toString();
+  }
+
   function $(selector) {
     return document.querySelector(selector);
   }
@@ -40,7 +53,7 @@
   }
 
   async function fetchModules() {
-    const response = await fetch("/api/modules");
+    const response = await fetch(buildApiUrl("api/modules"));
     if (!response.ok) {
       throw new Error("Kon categorieën niet laden");
     }
@@ -48,7 +61,9 @@
   }
 
   async function fetchQuestion(id) {
-    const response = await fetch(`/api/questions/${encodeURIComponent(id)}`);
+    const response = await fetch(
+      buildApiUrl(`api/questions/${encodeURIComponent(id)}`)
+    );
     if (!response.ok) {
       throw new Error("Kon vraag niet laden");
     }
@@ -151,7 +166,9 @@
     };
 
     const questionId = getQueryParam("id");
-    const url = questionId ? `/api/questions/${encodeURIComponent(questionId)}` : "/api/questions";
+    const url = questionId
+      ? buildApiUrl(`api/questions/${encodeURIComponent(questionId)}`)
+      : buildApiUrl("api/questions");
     const method = questionId ? "PUT" : "POST";
 
     const response = await fetch(url, {
@@ -209,6 +226,10 @@
     const cancelButton = $("#cancel-button");
     const form = $("#question-form");
     const moduleSelect = $("#question-module");
+
+    if (!window.__CHAT_SPEL_API_BASE_PATH__) {
+      window.__CHAT_SPEL_API_BASE_PATH__ = getApiBasePath();
+    }
 
     let modules = [];
     try {
