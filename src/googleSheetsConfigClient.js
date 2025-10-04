@@ -80,6 +80,64 @@
     return trimmed;
   }
 
+  function hasOwn(obj, prop) {
+    return Object.prototype.hasOwnProperty.call(obj, prop);
+  }
+
+  function resolveDefaultKey(row) {
+    const keyCandidates = [
+      "key",
+      "Key",
+      "sleutel",
+      "Sleutel",
+      "column0",
+      "Column0",
+      "kolom0",
+      "Kolom0",
+      "A",
+      "a"
+    ];
+
+    for (const candidate of keyCandidates) {
+      if (!hasOwn(row, candidate)) {
+        continue;
+      }
+      const value = row[candidate];
+      if (value === null || typeof value === "undefined") {
+        continue;
+      }
+      const trimmed = typeof value === "string" ? value.trim() : String(value).trim();
+      if (trimmed) {
+        return trimmed;
+      }
+    }
+
+    return "";
+  }
+
+  function resolveDefaultValue(row) {
+    const valueCandidates = [
+      "value",
+      "Value",
+      "waarde",
+      "Waarde",
+      "column1",
+      "Column1",
+      "kolom1",
+      "Kolom1",
+      "B",
+      "b"
+    ];
+
+    for (const candidate of valueCandidates) {
+      if (hasOwn(row, candidate)) {
+        return row[candidate];
+      }
+    }
+
+    return undefined;
+  }
+
   function parseUrl(value) {
     if (value === null || typeof value === "undefined") {
       return "";
@@ -343,9 +401,8 @@
     }
 
     return rows.reduce((acc, row) => {
-      const key = row.key || row.Key || row.sleutel || row.Sleutel;
-      const rawValue =
-        row.value ?? row.Value ?? row.waarde ?? row.Waarde ?? "";
+      const key = resolveDefaultKey(row);
+      const rawValue = resolveDefaultValue(row);
       if (!key) {
         return acc;
       }
