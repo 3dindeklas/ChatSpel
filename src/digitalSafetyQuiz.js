@@ -496,19 +496,146 @@
     return el;
   }
 
-  function storageAvailable(type = "localStorage") {
-    if (typeof window === "undefined") {
-      return false;
+  class IndexedDbAdapter {
+    constructor(options = {}) {
+      this.dbName = options.dbName || "DigitalSafetyQuizDB";
+      this.storeName = options.storeName || "dailySessions";
+      this.version = 1;
+      this.supported =
+        typeof window !== "undefined" &&
+        typeof window.indexedDB !== "undefined";
+      this.db = null;
+      this.ready = null;
     }
 
-    try {
-      const storage = window[type];
-      const testKey = "__dsq_storage_test__";
-      storage.setItem(testKey, testKey);
-      storage.removeItem(testKey);
-      return true;
-    } catch (error) {
-      return false;
+    get isSupported() {
+      return this.supported;
+    }
+
+    async _openDatabase() {
+      if (!this.supported) {
+        return null;
+      }
+
+      if (this.db) {
+        return this.db;
+      }
+
+      if (!this.ready) {
+        this.ready = new Promise((resolve) => {
+          try {
+            const request = window.indexedDB.open(this.dbName, this.version);
+            request.onupgradeneeded = (event) => {
+              const db = event.target.result;
+              if (!db.objectStoreNames.contains(this.storeName)) {
+                db.createObjectStore(this.storeName, { keyPath: "dateKey" });
+              }
+            };
+            request.onsuccess = () => {
+              const db = request.result;
+              db.onversionchange = () => {
+                db.close();
+              };
+              this.db = db;
+              resolve(db);
+            };
+            request.onerror = () => resolve(null);
+          } catch (error) {
+            resolve(null);
+          }
+        });
+      }
+
+      return this.ready;
+    }
+
+    async loadAll() {
+      const db = await this._openDatabase();
+      if (!db) {
+        return [];
+      }
+
+      return new Promise((resolve) => {
+        const records = [];
+        let resolved = false;
+        const finish = () => {
+          if (resolved) {
+            return;
+          }
+          resolved = true;
+          resolve(
+            records.map((entry) => ({
+              dateKey: entry.dateKey,
+              data: entry.data
+            }))
+          );
+        };
+
+        try {
+          const tx = db.transaction(this.storeName, "readonly");
+          const store = tx.objectStore(this.storeName);
+          tx.onerror = finish;
+          tx.onabort = finish;
+
+          if (typeof store.getAll === "function") {
+            const request = store.getAll();
+            request.onsuccess = () => {
+              const result = Array.isArray(request.result)
+                ? request.result
+                : [];
+              result.forEach((entry) => {
+                if (entry && entry.dateKey) {
+                  records.push(entry);
+                }
+              });
+              finish();
+            };
+            request.onerror = finish;
+          } else {
+            const request = store.openCursor();
+            request.onsuccess = (event) => {
+              const cursor = event.target.result;
+              if (cursor) {
+                const value = cursor.value;
+                if (value && value.dateKey) {
+                  records.push(value);
+                }
+                cursor.continue();
+              } else {
+                finish();
+              }
+            };
+            request.onerror = finish;
+          }
+        } catch (error) {
+          finish();
+        }
+      });
+    }
+
+    async save(dateKey, data) {
+      if (!dateKey) {
+        return false;
+      }
+
+      const db = await this._openDatabase();
+      if (!db) {
+        return false;
+      }
+
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction(this.storeName, "readwrite");
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+          tx.onabort = () => resolve(false);
+
+          const store = tx.objectStore(this.storeName);
+          store.put({ dateKey, data });
+        } catch (error) {
+          resolve(false);
+        }
+      });
     }
   }
 
@@ -554,14 +681,97 @@
   class DailySessionStore {
     constructor(options = {}) {
       this.prefix = options.prefix || "digitalSafetyQuiz:sessions";
-      this.storageEnabled = storageAvailable("localStorage");
-      this.memoryStore = {};
+      this.database = new IndexedDbAdapter();
+      this.storageEnabled = this.database.isSupported;
+      this.cache = {};
       this.sessionIndex = {};
       this._rebuildIndex();
+      this._initializeFromDatabase();
     }
 
     _getDateKey(date = new Date()) {
       return `${this.prefix}:${date.toISOString().slice(0, 10)}`;
+    }
+
+    _initializeFromDatabase() {
+      if (!this.storageEnabled) {
+        return;
+      }
+
+      this.database
+        .loadAll()
+        .then((entries) => {
+          if (!Array.isArray(entries)) {
+            return;
+          }
+
+          entries.forEach((entry) => {
+            if (!entry || !entry.dateKey) {
+              return;
+            }
+            const normalized = this._normalizeRecord(entry.data);
+            if (this.cache[entry.dateKey]) {
+              const merged = this._mergeRecords(
+                this.cache[entry.dateKey],
+                normalized
+              );
+              this.cache[entry.dateKey] = merged;
+            } else {
+              this.cache[entry.dateKey] = normalized;
+            }
+          });
+
+          this._rebuildIndex();
+          this._broadcastChange();
+        })
+        .catch(() => {
+          /* stil in geheugen werken */
+        });
+    }
+
+    _normalizeRecord(record) {
+      const cloned = this._cloneData(record);
+      if (!Array.isArray(cloned.sessions)) {
+        cloned.sessions = [];
+      }
+      return cloned;
+    }
+
+    _mergeRecords(target, source) {
+      const targetRecord = this._normalizeRecord(target);
+      const sourceRecord = this._normalizeRecord(source);
+      const sessionMap = new Map();
+
+      (targetRecord.sessions || []).forEach((session) => {
+        if (session && session.id) {
+          sessionMap.set(session.id, session);
+        }
+      });
+
+      (sourceRecord.sessions || []).forEach((session) => {
+        if (session && session.id) {
+          sessionMap.set(session.id, session);
+        }
+      });
+
+      return {
+        ...targetRecord,
+        ...sourceRecord,
+        sessions: Array.from(sessionMap.values())
+      };
+    }
+
+    _cloneData(data) {
+      try {
+        return JSON.parse(JSON.stringify(data || { sessions: [] }));
+      } catch (error) {
+        const fallback =
+          data && typeof data === "object" ? { ...data } : { sessions: [] };
+        fallback.sessions = Array.isArray(data?.sessions)
+          ? [...data.sessions]
+          : [];
+        return fallback;
+      }
     }
 
     _readByKey(dateKey) {
@@ -569,29 +779,16 @@
         return { sessions: [] };
       }
 
-      if (this.storageEnabled) {
-        const raw = window.localStorage.getItem(dateKey);
-        if (!raw) {
-          return { sessions: [] };
-        }
-        try {
-          return JSON.parse(raw);
-        } catch (error) {
-          return { sessions: [] };
-        }
+      if (!this.cache[dateKey]) {
+        this.cache[dateKey] = { sessions: [] };
       }
 
-      if (!this.memoryStore[dateKey]) {
-        this.memoryStore[dateKey] = { sessions: [] };
-      }
-
-      return JSON.parse(JSON.stringify(this.memoryStore[dateKey]));
+      return this._cloneData(this.cache[dateKey]);
     }
 
     _saveByKey(dateKey, data, options = {}) {
       const { merge = true } = options;
-      const incoming =
-        data && typeof data === "object" ? { ...data } : { sessions: [] };
+      const incoming = this._normalizeRecord(data);
 
       let dataToStore = incoming;
 
@@ -618,13 +815,16 @@
         };
       }
 
-      const serialized = JSON.stringify(dataToStore);
+      const cloned = this._cloneData(dataToStore);
+      this.cache[dateKey] = cloned;
+
       if (this.storageEnabled) {
-        window.localStorage.setItem(dateKey, serialized);
-      } else {
-        this.memoryStore[dateKey] = JSON.parse(serialized);
+        this.database.save(dateKey, cloned).catch(() => {
+          /* val terug op cache */
+        });
       }
-      this._indexSessions(dateKey, dataToStore.sessions);
+
+      this._indexSessions(dateKey, cloned.sessions);
       this._broadcastChange();
     }
 
@@ -637,9 +837,10 @@
     }
 
     _rebuildIndex() {
-      const todayKey = this._getDateKey();
-      const data = this._readByKey(todayKey);
-      this._indexSessions(todayKey, data.sessions);
+      this.sessionIndex = {};
+      Object.entries(this.cache).forEach(([dateKey, record]) => {
+        this._indexSessions(dateKey, record.sessions);
+      });
     }
 
     _getSession(dateKey, sessionId) {
@@ -767,7 +968,6 @@
       this.handleUpdate = this.update.bind(this);
       if (typeof window !== "undefined") {
         window.addEventListener(SESSION_EVENT_NAME, this.handleUpdate);
-        window.addEventListener("storage", this.handleUpdate);
       }
     }
 
@@ -914,7 +1114,6 @@
     destroy() {
       if (typeof window !== "undefined") {
         window.removeEventListener(SESSION_EVENT_NAME, this.handleUpdate);
-        window.removeEventListener("storage", this.handleUpdate);
       }
     }
   }
