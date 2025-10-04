@@ -5,12 +5,13 @@ Deze repository bevat een kant-en-klare quizmodule die je eenvoudig kunt integre
 ## Bestanden
 
 - `src/digitalSafetyQuiz.js` – JavaScript-module die de quiz rendert en beheert.
+- `src/googleSheetsConfigClient.js` – Laadt configuratie rechtstreeks uit Google Sheets.
 - `styles/digitalSafetyQuiz.css` – Stijlen voor de quiz.
 - `public/index.html` – Voorbeeldpagina om de quiz lokaal te bekijken/testen.
 
 ## Lokaal testen
 
-Installeer eerst de afhankelijkheden en start daarna de Node-server. De server levert de quizbestanden, API's en beheerschermen uit.
+Installeer eerst de afhankelijkheden en start daarna de Node-server. De server levert de statische bestanden voor de quiz en het beheer uit.
 
 ```bash
 npm install
@@ -18,7 +19,7 @@ npm start
 npm test
 ```
 
-Open vervolgens [http://localhost:3000/](http://localhost:3000/) in je browser om de quiz te bekijken. Het live dashboard is bereikbaar via `public/dashboard.html` en het beheer van vragen via `public/questions.html`.
+Open vervolgens [http://localhost:3000/](http://localhost:3000/) in je browser om de quiz te bekijken. Het live dashboard is bereikbaar via `public/dashboard.html` en het vragenoverzicht via `public/questions.html`.
 
 ### Automatische dashboardverversing
 
@@ -26,20 +27,25 @@ Het dashboard wordt standaard elke 15 seconden ververst. Pas dit aan door `refre
 
 ### Vragen beheren
 
-Ga naar [http://localhost:3000/questions.html](http://localhost:3000/questions.html) om het overzicht van vragen te zien. Vanuit dit scherm kun je bestaande vragen bewerken of nieuwe vragen toevoegen. Het formulier ondersteunt het aanpassen van antwoordopties, feedbackteksten en het type vraag (één antwoord of meerdere antwoorden).
+Ga naar [http://localhost:3000/questions.html](http://localhost:3000/questions.html) om het overzicht van vragen te zien. De data wordt rechtstreeks uit Google Sheets geladen; wijzigingen doe je dus in het spreadsheet. De beheerpagina laat enkel de actuele stand zien.
 
 ## Integratie op je eigen site
 
-1. Publiceer de bestanden `digitalSafetyQuiz.js` en `digitalSafetyQuiz.css` op een locatie die jouw website kan laden (bijvoorbeeld je eigen hosting of een CDN).
+1. Publiceer de bestanden `googleSheetsConfigClient.js`, `digitalSafetyQuiz.js` en `digitalSafetyQuiz.css` op een locatie die jouw website kan laden (bijvoorbeeld je eigen hosting of een CDN).
 2. Voeg op je pagina een element toe waar de quiz in mag landen, bij voorkeur een leeg `<div>`.
-3. Zet vóór het initialiseren van de quiz de globale variabele `window.__CHAT_SPEL_SESSION_API_BASE_URL__` op de URL van je Google Apps Script web-app (zie hieronder voor de instructies).
+3. Stel vóór het laden van de scripts de gewenste globale variabelen in:
+   - `window.__CHAT_SPEL_GOOGLE_SHEETS_ID__` – het ID van je spreadsheet (optioneel, standaardwaarde staat in de code).
+   - `window.__CHAT_SPEL_GOOGLE_SHEETS_DEFAULTS_SHEET__`, `...MODULES_SHEET__`, `...QUESTIONS_SHEET__`, `...OPTIONS_SHEET__` – enkel nodig als je andere tabbladnamen gebruikt.
+   - `window.__CHAT_SPEL_SESSION_API_BASE_URL__` – URL van je Google Apps Script web-app voor het wegschrijven van sessies.
 4. Voeg onderstaande HTML toe en pas de paden naar de bestanden aan.
 
 ```html
 <div id="quiz"></div>
 <link rel="stylesheet" href="https://jouw-domein.nl/path/to/digitalSafetyQuiz.css" />
+<script src="https://jouw-domein.nl/path/to/googleSheetsConfigClient.js"></script>
 <script src="https://jouw-domein.nl/path/to/digitalSafetyQuiz.js"></script>
 <script>
+  window.__CHAT_SPEL_GOOGLE_SHEETS_ID__ = "JE_EIGEN_SHEET_ID";
   window.__CHAT_SPEL_SESSION_API_BASE_URL__ =
     "https://script.google.com/macros/s/JE-GEDEPLOYEDE-ID/exec";
 
@@ -53,7 +59,7 @@ Ga naar [http://localhost:3000/questions.html](http://localhost:3000/questions.h
 
 ### Configuratie via Google Sheets
 
-Alle quizdata komt rechtstreeks uit Google Sheets. De standaard Spreadsheet-ID is `1-mU_hGc-GLgu1QD_s1gyYW7iZ992srYMdGeQ-nicuRc`. Wil je een ander spreadsheet gebruiken, stel dan de omgevingsvariabele `GOOGLE_SHEETS_ID` in voordat je de server start.
+Alle quizdata komt rechtstreeks uit Google Sheets. De standaard Spreadsheet-ID is `1-mU_hGc-GLgu1QD_s1gyYW7iZ992srYMdGeQ-nicuRc`. Wil je een ander spreadsheet gebruiken, stel dan vóór het laden van de scripts `window.__CHAT_SPEL_GOOGLE_SHEETS_ID__` in op jouw eigen ID.
 
 Maak in het spreadsheet minimaal de volgende tabbladen aan:
 
@@ -79,10 +85,10 @@ Veel succes met het digitale veiligheidsrijbewijs!
 ## Sessies opslaan in Google Sheets
 
 Gebruik het Google Apps Script in [`docs/google-apps-script-session-mirror.gs`](docs/google-apps-script-session-mirror.gs) om
-sessiegegevens rechtstreeks in een Google Sheet te bewaren. Het script implementeert dezelfde routes als de Node-server
-(`POST /api/sessions`, `POST /api/sessions/:id/heartbeat`, `POST /api/sessions/:id/attempt`, `POST /api/sessions/:id/complete`,
-`POST /api/sessions/:id/leave` en `GET /api/dashboard`) en werkt zonder bijkomende configuratie zodra je het hebt gedeployed
-als web-app.
+sessiegegevens rechtstreeks in een Google Sheet te bewaren. Het script implementeert de routes waar de quiz en het dashboard mee
+communiceren (`POST /api/sessions`, `POST /api/sessions/:id/heartbeat`, `POST /api/sessions/:id/attempt`,
+`POST /api/sessions/:id/complete`, `POST /api/sessions/:id/leave` en `GET /api/dashboard`) en werkt zonder bijkomende
+configuratie zodra je het hebt gedeployed als web-app.
 
 1. Maak een nieuw Apps Script-project aan en plak de code uit het hierboven genoemde bestand in de editor.
 2. Vul je Spreadsheet-ID in en deploy het project als web-app met toegang voor iedereen met de link.

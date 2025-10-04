@@ -1,80 +1,46 @@
 (function () {
   "use strict";
 
-  const PAGE_BASE = new URL("./", window.location.href);
+  function getSheetOptions() {
+    const sheetOptions = {};
+    const mappings = [
+      ["sheetId", "__CHAT_SPEL_GOOGLE_SHEETS_ID__"],
+      ["defaultsSheet", "__CHAT_SPEL_GOOGLE_SHEETS_DEFAULTS_SHEET__"],
+      ["modulesSheet", "__CHAT_SPEL_GOOGLE_SHEETS_MODULES_SHEET__"],
+      ["questionsSheet", "__CHAT_SPEL_GOOGLE_SHEETS_QUESTIONS_SHEET__"],
+      ["optionsSheet", "__CHAT_SPEL_GOOGLE_SHEETS_OPTIONS_SHEET__"]
+    ];
 
-  function stripTrailingPublic(pathname) {
-    if (!pathname) {
-      return "";
-    }
-
-    const segments = String(pathname)
-      .split("/")
-      .filter(Boolean);
-
-    if (segments.length && segments[segments.length - 1] === "public") {
-      segments.pop();
-    }
-
-    if (!segments.length) {
-      return "";
-    }
-
-    return `/${segments.join("/")}`;
-  }
-
-  function normalizeBasePath(path) {
-    if (!path || typeof path !== "string") {
-      return "";
-    }
-
-    const trimmed = path.trim();
-    if (!trimmed || trimmed === "/") {
-      return "";
-    }
-
-    const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(trimmed);
-
-    if (isAbsolute) {
-      try {
-        const parsed = new URL(trimmed, PAGE_BASE.origin);
-        const sanitizedPath = stripTrailingPublic(
-          parsed.pathname.replace(/\/+$/, "")
-        );
-        parsed.pathname = sanitizedPath || "/";
-        return parsed.toString().replace(/\/+$/, "");
-      } catch (error) {
-        return trimmed.replace(/\/+$/, "");
+    mappings.forEach(([optionKey, globalKey]) => {
+      const value = window[globalKey];
+      if (typeof value === "string" && value.trim()) {
+        sheetOptions[optionKey] = value.trim();
       }
+    });
+
+    if (
+      !sheetOptions.sheetId &&
+      window.DSQGoogleSheets &&
+      window.DSQGoogleSheets.DEFAULT_SHEET_ID
+    ) {
+      sheetOptions.sheetId = window.DSQGoogleSheets.DEFAULT_SHEET_ID;
     }
 
-    const normalized = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-    const sanitizedPath = stripTrailingPublic(normalized.replace(/\/+$/, ""));
+    return sheetOptions;
+  }
 
-    if (!sanitizedPath || sanitizedPath === "/") {
+  function getSpreadsheetUrl() {
+    const sheetId =
+      (typeof window.__CHAT_SPEL_GOOGLE_SHEETS_ID__ === "string" &&
+        window.__CHAT_SPEL_GOOGLE_SHEETS_ID__.trim()) ||
+      (window.DSQGoogleSheets && window.DSQGoogleSheets.DEFAULT_SHEET_ID) ||
+      "";
+
+    if (!sheetId) {
       return "";
     }
 
-    return sanitizedPath;
-  }
-
-  function getApiBasePath() {
-    if (typeof window.__CHAT_SPEL_API_BASE_PATH__ === "string") {
-      return normalizeBasePath(window.__CHAT_SPEL_API_BASE_PATH__);
-    }
-    return normalizeBasePath(PAGE_BASE.pathname);
-  }
-
-  function getApiBaseUrl() {
-    const basePath = getApiBasePath();
-    const normalized = basePath ? `${basePath}/` : "";
-    return new URL(normalized, PAGE_BASE.origin);
-  }
-
-  function buildApiUrl(path) {
-    const base = getApiBaseUrl();
-    const normalized = (path || "").toString().replace(/^\/+/, "");
-    return new URL(normalized, base).toString();
+    return `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
   }
 
   function $(selector) {
@@ -91,23 +57,100 @@
     }
     if (options.attrs) {
       Object.entries(options.attrs).forEach(([key, value]) => {
-        element.setAttribute(key, value);
+        if (value !== undefined) {
+          element.setAttribute(key, value);
+        }
       });
     }
     return element;
   }
 
-  function showFeedback(container, message, variant = "error") {
+  function showFeedback(container, message, variant = "info") {
     container.innerHTML = "";
     const box = createElement("div", {
-      className: variant === "error" ? "admin-error" : "admin-success",
+      className:
+        variant === "error"
+          ? "admin-error"
+          : variant === "success"
+          ? "admin-success"
+          : "admin-info",
       text: message
     });
     container.append(box);
   }
 
-  function clearFeedback(container) {
-    container.innerHTML = "";
+  function populateModules(select, modules, selectedId) {
+    if (!select) {
+      return;
+    }
+    select.innerHTML = "";
+    modules.forEach((module) => {
+      const option = createElement("option", {
+        text: module.title,
+        attrs: { value: module.id }
+      });
+      select.append(option);
+    });
+    if (selectedId) {
+      select.value = selectedId;
+    }
+    select.disabled = true;
+  }
+
+  function renderOptionsList(optionsList, question) {
+    if (!optionsList) {
+      return;
+    }
+    optionsList.innerHTML = "";
+    const options = Array.isArray(question?.options) ? question.options : [];
+    const correctIds = new Set(
+      Array.isArray(question?.options)
+        ? options
+            .filter((option) => option.isCorrect)
+            .map((option) => option.id)
+        : []
+    );
+
+    if (!options.length) {
+      const empty = createElement("p", {
+        className: "admin-hint",
+        text: "Geen antwoordopties gevonden in de Google Sheet."
+      });
+      optionsList.append(empty);
+      return;
+    }
+
+    options.forEach((option) => {
+      const wrapper = createElement("div", { className: "admin-option" });
+      const label = createElement("span", {
+        className: "admin-option-label",
+        text: option.label || "(Lege optie)"
+      });
+      wrapper.append(label);
+
+      if (correctIds.has(option.id)) {
+        const badge = createElement("span", {
+          className: "admin-tag",
+          text: "Juist antwoord"
+        });
+        wrapper.append(badge);
+      }
+
+      optionsList.append(wrapper);
+    });
+  }
+
+  function disableFormInteractions(form) {
+    if (!form) {
+      return;
+    }
+    const controls = form.querySelectorAll("input, textarea, select, button");
+    controls.forEach((control) => {
+      if (control.id === "cancel-button") {
+        return;
+      }
+      control.disabled = true;
+    });
   }
 
   function getQueryParam(name) {
@@ -115,228 +158,142 @@
     return params.get(name);
   }
 
-  async function fetchModules() {
-    const response = await fetch(buildApiUrl("api/modules"));
-    if (!response.ok) {
-      throw new Error("Kon categorieën niet laden");
+  async function loadConfig() {
+    if (
+      !window.DSQGoogleSheets ||
+      typeof window.DSQGoogleSheets.loadQuizConfig !== "function"
+    ) {
+      throw new Error(
+        "Google Sheets loader is niet beschikbaar. Controleer of googleSheetsConfigClient.js geladen is."
+      );
     }
-    return response.json();
+    return window.DSQGoogleSheets.loadQuizConfig(getSheetOptions());
   }
 
-  async function fetchQuestion(id) {
-    const response = await fetch(
-      buildApiUrl(`api/questions/${encodeURIComponent(id)}`)
+  async function loadQuestionDetail(questionId) {
+    if (!questionId) {
+      return null;
+    }
+    if (
+      !window.DSQGoogleSheets ||
+      typeof window.DSQGoogleSheets.getQuestionDetail !== "function"
+    ) {
+      throw new Error(
+        "Google Sheets loader is niet beschikbaar. Controleer of googleSheetsConfigClient.js geladen is."
+      );
+    }
+    return window.DSQGoogleSheets.getQuestionDetail(
+      questionId,
+      getSheetOptions()
     );
-    if (!response.ok) {
-      throw new Error("Kon vraag niet laden");
-    }
-    return response.json();
-  }
-
-  function createOptionField(optionsList, option = {}) {
-    const wrapper = createElement("div", { className: "admin-option" });
-    const input = createElement("input", {
-      attrs: {
-        type: "text",
-        value: option.label || "",
-        placeholder: "Optietekst",
-        required: "required"
-      }
-    });
-    if (option.id) {
-      input.dataset.optionId = option.id;
-    }
-
-    const checkboxWrapper = createElement("label", {
-      className: "admin-tag"
-    });
-    const checkbox = createElement("input", {
-      attrs: {
-        type: "checkbox",
-        checked: option.isCorrect ? "checked" : undefined
-      }
-    });
-    const checkboxLabel = createElement("span", { text: "Juist" });
-    checkboxWrapper.append(checkbox, checkboxLabel);
-
-    const removeButton = createElement("button", {
-      className: "admin-option-remove",
-      text: "Verwijderen",
-      attrs: { type: "button" }
-    });
-
-    removeButton.addEventListener("click", () => {
-      if (optionsList.children.length <= 2) {
-        showFeedback(
-          $("#editor-feedback"),
-          "Een vraag moet minimaal twee antwoordopties hebben."
-        );
-        return;
-      }
-      optionsList.removeChild(wrapper);
-    });
-
-    wrapper.append(input, checkboxWrapper, removeButton);
-    optionsList.append(wrapper);
-  }
-
-  function readOptions(optionsList) {
-    const items = Array.from(optionsList.querySelectorAll(".admin-option"));
-    return items.map((item) => {
-      const input = item.querySelector("input[type='text']");
-      const checkbox = item.querySelector("input[type='checkbox']");
-      return {
-        id: input.dataset.optionId,
-        label: input.value.trim(),
-        isCorrect: checkbox.checked
-      };
-    });
-  }
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    const feedback = $("#editor-feedback");
-    clearFeedback(feedback);
-
-    const moduleSelect = $("#question-module");
-    const textInput = $("#question-text");
-    const typeSelect = $("#question-type");
-    const optionsList = $("#options-list");
-    const feedbackCorrect = $("#feedback-correct");
-    const feedbackIncorrect = $("#feedback-incorrect");
-
-    const options = readOptions(optionsList).filter((option) => option.label);
-
-    if (options.length < 2) {
-      showFeedback(feedback, "Voeg minimaal twee antwoordopties toe.");
-      return;
-    }
-
-    if (!options.some((option) => option.isCorrect)) {
-      showFeedback(feedback, "Markeer minimaal één juist antwoord.");
-      return;
-    }
-
-    const payload = {
-      moduleId: moduleSelect.value,
-      text: textInput.value.trim(),
-      type: typeSelect.value,
-      feedback: {
-        correct: feedbackCorrect.value.trim(),
-        incorrect: feedbackIncorrect.value.trim()
-      },
-      options
-    };
-
-    const questionId = getQueryParam("id");
-    const url = questionId
-      ? buildApiUrl(`api/questions/${encodeURIComponent(questionId)}`)
-      : buildApiUrl("api/questions");
-    const method = questionId ? "PUT" : "POST";
-
-    const response = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const message = errorData.message || "Opslaan is mislukt.";
-      showFeedback(feedback, message);
-      return;
-    }
-
-    showFeedback(feedback, "Vraag opgeslagen.", "success");
-    setTimeout(() => {
-      window.location.href = "questions.html";
-    }, 800);
-  }
-
-  function populateModules(select, modules, selectedId) {
-    select.innerHTML = "";
-    modules.forEach((module) => {
-      const option = createElement("option", {
-        text: module.title,
-        attrs: { value: module.id }
-      });
-      if (selectedId && selectedId === module.id) {
-        option.selected = true;
-      }
-      select.append(option);
-    });
-  }
-
-  function populateForm(question) {
-    $("#editor-title").textContent = "Vraag bewerken";
-    $("#question-text").value = question.text || "";
-    $("#question-type").value = question.type || "single";
-    $("#feedback-correct").value = question.feedback?.correct || "";
-    $("#feedback-incorrect").value = question.feedback?.incorrect || "";
-
-    const optionsList = $("#options-list");
-    optionsList.innerHTML = "";
-    const options = Array.isArray(question.options) && question.options.length
-      ? question.options
-      : [{}, {}];
-    options.forEach((option) => createOptionField(optionsList, option));
   }
 
   document.addEventListener("DOMContentLoaded", async () => {
-    const feedback = $("#editor-feedback");
-    const optionsList = $("#options-list");
-    const addButton = $("#add-option");
-    const cancelButton = $("#cancel-button");
+    const title = $("#editor-title");
     const form = $("#question-form");
+    const feedback = $("#editor-feedback");
+    const hint = $("#editor-hint");
     const moduleSelect = $("#question-module");
+    const textInput = $("#question-text");
+    const typeSelect = $("#question-type");
+    const feedbackCorrect = $("#feedback-correct");
+    const feedbackIncorrect = $("#feedback-incorrect");
+    const optionsList = $("#options-list");
+    const addOptionButton = $("#add-option");
+    const cancelButton = $("#cancel-button");
 
-    if (!window.__CHAT_SPEL_API_BASE_PATH__) {
-      window.__CHAT_SPEL_API_BASE_PATH__ = getApiBasePath();
+    if (addOptionButton) {
+      addOptionButton.style.display = "none";
     }
 
-    let modules = [];
-    try {
-      modules = await fetchModules();
-      populateModules(moduleSelect, modules, null);
-    } catch (error) {
-      showFeedback(feedback, error.message || "Kon de categorieën niet laden.");
-      return;
+    if (form) {
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        showFeedback(
+          feedback,
+          "Wijzig vragen rechtstreeks in Google Sheets. Deze pagina toont alleen een voorbeeld.",
+          "info"
+        );
+      });
+    }
+
+    if (cancelButton) {
+      cancelButton.textContent = "Terug";
+      cancelButton.addEventListener("click", () => {
+        window.location.href = "questions.html";
+      });
+    }
+
+    const spreadsheetUrl = getSpreadsheetUrl();
+    if (hint && spreadsheetUrl) {
+      const link = createElement("a", {
+        text: "open het Google Sheet",
+        attrs: { href: spreadsheetUrl, target: "_blank", rel: "noopener" }
+      });
+      hint.innerHTML = "Alle wijzigingen voer je uit in Google Sheets (";
+      hint.append(link);
+      hint.append(document.createTextNode(")"));
     }
 
     const questionId = getQueryParam("id");
-    if (questionId) {
-      try {
-        const question = await fetchQuestion(questionId);
-        populateModules(moduleSelect, modules, question.moduleId);
-        populateForm(question);
-      } catch (error) {
-        showFeedback(
-          feedback,
-          error.message || "Kon de vraaggegevens niet laden."
-        );
-        return;
+    showFeedback(
+      feedback,
+      "Gegevens worden geladen vanuit Google Sheets...",
+      "info"
+    );
+
+    try {
+      const config = await loadConfig();
+      const modules = config.modules.map((module) => ({
+        id: module.id,
+        title: module.title
+      }));
+
+      populateModules(moduleSelect, modules, null);
+
+      let detail = null;
+      if (questionId) {
+        detail = await loadQuestionDetail(questionId);
       }
-    } else {
-      optionsList.innerHTML = "";
-      createOptionField(optionsList, {});
-      createOptionField(optionsList, {});
-    }
 
-    addButton.addEventListener("click", () => {
-      createOptionField(optionsList, {});
-    });
-
-    cancelButton.addEventListener("click", () => {
-      window.location.href = "questions.html";
-    });
-
-    form.addEventListener("submit", (event) => {
-      handleSubmit(event).catch((error) => {
+      if (detail) {
+        if (title) {
+          title.textContent = "Vraag bekijken";
+        }
+        moduleSelect.value = detail.moduleId || "";
+        textInput.value = detail.text || "";
+        typeSelect.value = detail.type || "single";
+        feedbackCorrect.value = detail.feedback?.correct || "";
+        feedbackIncorrect.value = detail.feedback?.incorrect || "";
+        renderOptionsList(optionsList, detail);
         showFeedback(
           feedback,
-          error.message || "Er is een fout opgetreden tijdens het opslaan."
+          "Je bekijkt een vraag vanuit Google Sheets. Pas de gegevens daar aan om wijzigingen op te slaan.",
+          "info"
         );
-      });
-    });
+      } else {
+        if (title) {
+          title.textContent = "Vraagbeheer";
+        }
+        renderOptionsList(optionsList, { options: [] });
+        showFeedback(
+          feedback,
+          "Nieuwe vragen voeg je toe in Google Sheets. Deze editor is alleen ter referentie.",
+          "info"
+        );
+      }
+
+      disableFormInteractions(form);
+    } catch (error) {
+      showFeedback(
+        feedback,
+        error.message ||
+          "Het is niet gelukt om de gegevens uit Google Sheets te laden.",
+        "error"
+      );
+      if (optionsList) {
+        optionsList.innerHTML = "";
+      }
+    }
   });
 })();

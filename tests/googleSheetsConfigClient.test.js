@@ -1,0 +1,48 @@
+const {
+  loadQuizConfig,
+  listQuestions,
+  getQuestionDetail,
+  clearCache
+} = require("../src/googleSheetsConfigClient");
+
+const defaults = require("../data/google-sheets/defaults.json");
+const modules = require("../data/google-sheets/modules.json");
+const questions = require("../data/google-sheets/questions.json");
+const options = require("../data/google-sheets/options.json");
+
+const sheetsData = { defaults, modules, questions, options };
+
+describe("googleSheetsConfigClient", () => {
+  afterEach(() => {
+    clearCache();
+  });
+
+  test("stelt de quizconfiguratie samen uit Google Sheets", async () => {
+    const config = await loadQuizConfig({ sheetsData });
+
+    expect(config.title).toBe("Digitaal Veiligheidsrijbewijs");
+    expect(config.modules).toHaveLength(modules.length);
+    expect(config.modules[0].id).toBe("wachtwoorden");
+    expect(config.modules[0].questionPool).toHaveLength(8);
+    expect(config.modules[1].questionPool[0].options).toHaveLength(4);
+  });
+
+  test("geeft een vlakke lijst met vragen terug", async () => {
+    const rows = await listQuestions({ sheetsData });
+    expect(rows).toHaveLength(questions.length);
+    const multipleChoice = rows.find((row) => row.id === "share-privé");
+    expect(multipleChoice.type).toBe("multiple");
+    expect(multipleChoice.moduleTitle).toBe("Slim delen");
+  });
+
+  test("haalt een vraagdetail met juiste antwoorden op", async () => {
+    const detail = await getQuestionDetail("share-privé", { sheetsData });
+    expect(detail).not.toBeNull();
+    expect(detail.options).toHaveLength(4);
+    const correctOptions = detail.options.filter((option) => option.isCorrect);
+    expect(correctOptions.map((option) => option.id).sort()).toEqual([
+      "share-privé-b",
+      "share-privé-c"
+    ]);
+  });
+});

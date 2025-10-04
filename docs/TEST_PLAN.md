@@ -10,14 +10,15 @@ Dit testplan beschrijft hoe we de stabiliteit van de Digitale Veiligheidsquiz wa
 
 ## 2. Testpijlers
 
-### 2.1 API-integratietests (nu geïmplementeerd)
-- **Framework**: Jest + Supertest.
+### 2.1 Google-Sheets-configuratietests (nu geïmplementeerd)
+- **Framework**: Jest.
 - **Dekking**:
-  - Lezen van configuratie vanuit Google Sheets (`GET /api/quiz-config`, `GET /api/modules`, `GET /api/questions`).
-  - Afhandelen van niet-ondersteunde mutaties (`POST /api/questions` retourneert een duidelijke melding).
+  - Samenstellen van de quizconfiguratie op basis van Google Sheets tabbladen.
+  - Afleiden van vraag- en modulelijsten voor het beheer.
+  - Ophalen van vraagdetails inclusief juiste antwoordopties.
 - **Aanpak**:
-  - Gebruik `process.env.GOOGLE_SHEETS_FAKE_DATA_DIR` om naar lokale JSON-fixtures te verwijzen in plaats van live spreadsheets.
-  - Houd de fixtures klein en representatief zodat tests deterministisch blijven.
+  - Gebruik de JSON-fixtures in `data/google-sheets/` als brondata.
+  - Roep de functies uit `googleSheetsConfigClient` aan met `sheetsData`-overrides zodat er geen netwerkverkeer nodig is.
 
 ### 2.2 Front-end componenttests (nu geïmplementeerd)
 - **Framework**: Jest (jsdom-omgeving).
