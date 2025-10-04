@@ -1,11 +1,9 @@
 const { createApp } = require("./app");
-const { initializeDatabase } = require("./initializeDatabase");
 
 const PORT = process.env.PORT || 3000;
 
-async function startServer(port = PORT, appOptions = {}) {
-  await initializeDatabase();
-  const app = createApp(appOptions);
+async function startServer(port = PORT) {
+  const app = createApp();
 
   return new Promise((resolve, reject) => {
     const server = app.listen(port, () => {
@@ -23,7 +21,7 @@ async function startServer(port = PORT, appOptions = {}) {
 if (require.main === module) {
   startServer().catch((error) => {
     // eslint-disable-next-line no-console
-    console.error("Database-initialisatie of serverstart mislukt", error);
+    console.error("Serverstart mislukt", error);
     process.exit(1);
   });
 }

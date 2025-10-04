@@ -1,0 +1,218 @@
+[
+  {
+    "id": "pw-sterkste-wachtwoord",
+    "moduleId": "wachtwoorden",
+    "text": "Welk wachtwoord is het veiligst?",
+    "type": "single",
+    "feedbackCorrect": "Klopt! Dit wachtwoord is lang en gebruikt hoofdletters, cijfers en symbolen.",
+    "feedbackIncorrect": "Niet helemaal. Kies een wachtwoord dat lang is en verschillende soorten tekens gebruikt.",
+    "position": 0
+  },
+  {
+    "id": "pw-onthouden",
+    "moduleId": "wachtwoorden",
+    "text": "Wat is een goede manier om een wachtwoord te onthouden?",
+    "type": "single",
+    "feedbackCorrect": "Heel goed! Een wachtwoordzin is makkelijk te onthouden en moeilijk te raden.",
+    "feedbackIncorrect": "Probeer een wachtwoordzin te gebruiken. Dat is veiliger dan overal hetzelfde wachtwoord.",
+    "position": 1
+  },
+  {
+    "id": "pw-manager",
+    "moduleId": "wachtwoorden",
+    "text": "Waarom is een wachtwoordmanager handig?",
+    "type": "single",
+    "feedbackCorrect": "Precies! Een wachtwoordmanager maakt unieke wachtwoorden en bewaart ze veilig.",
+    "feedbackIncorrect": "Een wachtwoordmanager helpt je om sterke, unieke wachtwoorden te maken en te bewaren.",
+    "position": 2
+  },
+  {
+    "id": "pw-elk-account",
+    "moduleId": "wachtwoorden",
+    "text": "Waarom moet je voor elk account een ander wachtwoord gebruiken?",
+    "type": "single",
+    "feedbackCorrect": "Juist! Zo voorkom je dat iemand meteen overal kan inloggen.",
+    "feedbackIncorrect": "Als één wachtwoord uitlekt kunnen anderen anders al je accounts gebruiken.",
+    "position": 3
+  },
+  {
+    "id": "pw-symbool",
+    "moduleId": "wachtwoorden",
+    "text": "Welke combinatie maakt een wachtwoord extra sterk?",
+    "type": "single",
+    "feedbackCorrect": "Yes! Hoe meer variatie, hoe moeilijker het is om je wachtwoord te raden.",
+    "feedbackIncorrect": "Gebruik verschillende soorten tekens voor een sterk wachtwoord.",
+    "position": 4
+  },
+  {
+    "id": "pw-waarschuwing",
+    "moduleId": "wachtwoorden",
+    "text": "Je krijgt een melding dat een wachtwoord mogelijk is gelekt. Wat doe je?",
+    "type": "single",
+    "feedbackCorrect": "Goed gezien! Verander het wachtwoord direct om je account te beschermen.",
+    "feedbackIncorrect": "Reageer op een waarschuwing door het wachtwoord snel te veranderen.",
+    "position": 5
+  },
+  {
+    "id": "pw-twee-stappen",
+    "moduleId": "wachtwoorden",
+    "text": "Wat doet tweestapsverificatie (2FA)?",
+    "type": "single",
+    "feedbackCorrect": "Klopt! Het extra slotje maakt het veel moeilijker om in te breken.",
+    "feedbackIncorrect": "Tweestapsverificatie vraagt om een extra bevestiging voor extra veiligheid.",
+    "position": 6
+  },
+  {
+    "id": "pw-voorbeeld",
+    "moduleId": "wachtwoorden",
+    "text": "Welke wachtwoordzin is het sterkst?",
+    "type": "single",
+    "feedbackCorrect": "Lekker bezig! Deze zin is lang en bevat verschillende soorten tekens.",
+    "feedbackIncorrect": "Kies een wachtwoordzin die lang is en cijfers en symbolen gebruikt.",
+    "position": 7
+  },
+  {
+    "id": "share-toestemming",
+    "moduleId": "delen",
+    "text": "Je wilt een leuke foto van een klasgenoot delen. Wat doe je?",
+    "type": "single",
+    "feedbackCorrect": "Super! Vraag altijd toestemming voordat je iets deelt wat niet van jou is.",
+    "feedbackIncorrect": "Vraag altijd eerst toestemming voordat je een foto deelt.",
+    "position": 0
+  },
+  {
+    "id": "share-privé",
+    "moduleId": "delen",
+    "text": "Welke informatie kun je het beste voor jezelf houden?",
+    "type": "multiple",
+    "feedbackCorrect": "Goed gedaan! Adressen en wachtwoorden zijn privé.",
+    "feedbackIncorrect": "Denk eraan dat persoonlijke gegevens zoals adressen en wachtwoorden geheim moeten blijven.",
+    "position": 1
+  },
+  {
+    "id": "share-story",
+    "moduleId": "delen",
+    "text": "Wat controleer je voordat je iets in je story plaatst?",
+    "type": "single",
+    "feedbackCorrect": "Top! Controleer altijd wat je laat zien voordat je iets deelt.",
+    "feedbackIncorrect": "Kijk of er persoonlijke informatie te zien is voordat je post.",
+    "position": 2
+  },
+  {
+    "id": "share-prive-stand",
+    "moduleId": "delen",
+    "text": "Waarom is het slim om je account op privé te zetten?",
+    "type": "single",
+    "feedbackCorrect": "Juist! Zo bepaal jij wie je berichten kan zien.",
+    "feedbackIncorrect": "Op privé bepalen alleen jouw volgers wat je deelt.",
+    "position": 3
+  },
+  {
+    "id": "share-opinie",
+    "moduleId": "delen",
+    "text": "Je leest een spannend bericht en wilt het delen. Wat is verstandig?",
+    "type": "single",
+    "feedbackCorrect": "Goed! Controleer bronnen voordat je iets verder verspreidt.",
+    "feedbackIncorrect": "Controleer eerst of het bericht betrouwbaar is voordat je het deelt.",
+    "position": 4
+  },
+  {
+    "id": "share-locatie",
+    "moduleId": "delen",
+    "text": "Wanneer deel je het beste je locatie op sociale media?",
+    "type": "single",
+    "feedbackCorrect": "Precies! Wees voorzichtig met het delen van je locatie.",
+    "feedbackIncorrect": "Deel je locatie alleen als je zeker weet dat het veilig is.",
+    "position": 5
+  },
+  {
+    "id": "share-bericht",
+    "moduleId": "delen",
+    "text": "Iemand vraagt je in een chat om een gênante foto van jezelf. Wat doe je?",
+    "type": "single",
+    "feedbackCorrect": "Heel goed! Deel nooit iets waar je je niet prettig bij voelt en vertel het aan een volwassene.",
+    "feedbackIncorrect": "Deel geen gênante foto's en praat met iemand die je vertrouwt.",
+    "position": 6
+  },
+  {
+    "id": "share-reageren",
+    "moduleId": "delen",
+    "text": "Je ziet een gemene reactie onder een foto van een klasgenoot. Wat kun je doen?",
+    "type": "multiple",
+    "feedbackCorrect": "Goed dat je het probleem aanpakt en steun geeft!",
+    "feedbackIncorrect": "Meld nare reacties, bied steun en bespreek het met een volwassene.",
+    "position": 7
+  },
+  {
+    "id": "friends-bericht",
+    "moduleId": "online-vrienden",
+    "text": "Wat doe je als iemand die je niet kent je een bericht stuurt?",
+    "type": "single",
+    "feedbackCorrect": "Heel goed! Praat altijd met een volwassene als iemand je iets vreemd vraagt.",
+    "feedbackIncorrect": "Vertel het aan een volwassene die je vertrouwt en reageer niet zomaar.",
+    "position": 0
+  },
+  {
+    "id": "friends-afspraak",
+    "moduleId": "online-vrienden",
+    "text": "Iemand die je online kent vraagt om af te spreken. Wat is verstandig?",
+    "type": "single",
+    "feedbackCorrect": "Juist! Spreek nooit af zonder toestemming van een volwassene.",
+    "feedbackIncorrect": "Vertel het altijd aan een volwassene en ga niet zomaar naar een afspraak.",
+    "position": 1
+  },
+  {
+    "id": "friends-profiel",
+    "moduleId": "online-vrienden",
+    "text": "Hoe herken je een nepaccount?",
+    "type": "single",
+    "feedbackCorrect": "Goed gezien! Nepaccounts hebben vaak weinig echte informatie.",
+    "feedbackIncorrect": "Let op accounts met weinig informatie of vreemde berichten.",
+    "position": 2
+  },
+  {
+    "id": "friends-geheim",
+    "moduleId": "online-vrienden",
+    "text": "Een online vriend vraagt je om jullie gesprekken geheim te houden. Wat doe je?",
+    "type": "single",
+    "feedbackCorrect": "Heel goed! Vertel een volwassene als iemand om geheimhouding vraagt.",
+    "feedbackIncorrect": "Geheimen die je onzeker maken deel je altijd met een volwassene.",
+    "position": 3
+  },
+  {
+    "id": "friends-spel",
+    "moduleId": "online-vrienden",
+    "text": "Je speelt een online spel en iemand vraagt om via een andere app te chatten. Wat is verstandig?",
+    "type": "single",
+    "feedbackCorrect": "Goed! Chat alleen met mensen die je vertrouwt of die zijn goedgekeurd.",
+    "feedbackIncorrect": "Blijf bij mensen die je kent of die door een volwassene zijn goedgekeurd.",
+    "position": 4
+  },
+  {
+    "id": "friends-prijs",
+    "moduleId": "online-vrienden",
+    "text": "Je wint zogenaamd een prijs via een chatbericht en moet je gegevens invullen. Wat doe je?",
+    "type": "single",
+    "feedbackCorrect": "Heel goed! Dit kan phishing zijn, dus verwijder het bericht en waarschuw iemand.",
+    "feedbackIncorrect": "Geef geen gegevens door bij verdachte berichten en vertel het aan een volwassene.",
+    "position": 5
+  },
+  {
+    "id": "friends-wachtwoord",
+    "moduleId": "online-vrienden",
+    "text": "Een online vriend vraagt om je wachtwoord zodat hij kan helpen. Wat doe je?",
+    "type": "single",
+    "feedbackCorrect": "Precies! Deel je wachtwoord nooit, ook niet met vrienden.",
+    "feedbackIncorrect": "Wachtwoorden zijn altijd privé, deel ze met niemand.",
+    "position": 6
+  },
+  {
+    "id": "friends-gevoel",
+    "moduleId": "online-vrienden",
+    "text": "Iemand online maakt je onzeker of bang. Wat kun je doen?",
+    "type": "multiple",
+    "feedbackCorrect": "Goed gedaan! Stop het gesprek, bewaar bewijs en zoek hulp.",
+    "feedbackIncorrect": "Stop de chat, blokkeer de persoon, maak een screenshot en vertel het aan een volwassene.",
+    "position": 7
+  }
+]
