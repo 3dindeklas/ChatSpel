@@ -195,6 +195,14 @@
   box-shadow: 0 12px 24px rgba(59, 130, 246, 0.3);
 }
 
+.dsq-button:disabled,
+.dsq-button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
 .dsq-button:focus {
   outline: 3px solid rgba(99, 102, 241, 0.4);
   outline-offset: 2px;
