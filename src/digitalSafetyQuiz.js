@@ -312,12 +312,21 @@
       this.prefix = options.prefix || "digitalSafetyQuiz:sessions";
       this.apiBaseUrl = sanitizeApiBaseUrl(options.apiBaseUrl || "");
       this.heartbeatIntervalMs = options.heartbeatIntervalMs || 15000;
-      this.database = new IndexedDbAdapter();
-      this.storageEnabled = this.database.isSupported;
-      this.cache = {};
-      this.sessionIndex = {};
       this.remoteEnabled =
         typeof fetch === "function" && Boolean(this.apiBaseUrl);
+      this.database = new IndexedDbAdapter();
+
+      const persistencePreference = options.enableLocalPersistence;
+      if (persistencePreference === true) {
+        this.storageEnabled = this.database.isSupported;
+      } else if (persistencePreference === false) {
+        this.storageEnabled = false;
+      } else {
+        this.storageEnabled = this.database.isSupported && !this.remoteEnabled;
+      }
+
+      this.cache = {};
+      this.sessionIndex = {};
       this.remoteSnapshot = null;
       this._remotePollingTimer = null;
       this._heartbeatTimers = new Map();

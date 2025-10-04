@@ -41,14 +41,6 @@
           }
         };
 
-        const sessionApiBaseUrl = resolveAbsoluteUrl(
-          window.__CHAT_SPEL_SESSION_API_BASE_URL__
-        );
-
-        if (!window.__CHAT_SPEL_SESSION_API_BASE_URL__ && sessionApiBaseUrl) {
-          window.__CHAT_SPEL_SESSION_API_BASE_URL__ = sessionApiBaseUrl;
-        }
-
         const sheetOptions = {};
         const sheetOptionMappings = [
           ["sheetId", "__CHAT_SPEL_GOOGLE_SHEETS_ID__"],
@@ -106,7 +98,18 @@
           return;
         }
 
-        if (!sessionApiBaseUrl && window.console) {
+        const resolvedSessionApiBaseUrl = resolveAbsoluteUrl(
+          window.__CHAT_SPEL_SESSION_API_BASE_URL__ || config.sessionApiBaseUrl
+        );
+
+        if (
+          !window.__CHAT_SPEL_SESSION_API_BASE_URL__ &&
+          resolvedSessionApiBaseUrl
+        ) {
+          window.__CHAT_SPEL_SESSION_API_BASE_URL__ = resolvedSessionApiBaseUrl;
+        }
+
+        if (!resolvedSessionApiBaseUrl && window.console) {
           const { warn } = window.console;
           if (typeof warn === "function") {
             warn(
@@ -119,7 +122,7 @@
           new DigitalSafetyQuiz({
             container: "#quiz",
             config,
-            apiBaseUrl: sessionApiBaseUrl
+            apiBaseUrl: resolvedSessionApiBaseUrl
           });
         } catch (error) {
           if (container) {

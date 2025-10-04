@@ -80,6 +80,57 @@
     return trimmed;
   }
 
+  function parseUrl(value) {
+    if (value === null || typeof value === "undefined") {
+      return "";
+    }
+
+    if (typeof value === "string") {
+      return value.trim();
+    }
+
+    return String(value).trim();
+  }
+
+  function resolveSessionApiBaseUrl(defaults = {}) {
+    const candidate =
+      defaults.sessionApiBaseUrl ||
+      defaults.sessionApiBaseURL ||
+      defaults.sessionApiUrl ||
+      defaults.sessionApi ||
+      defaults.sessionApiEndpoint ||
+      "";
+
+    return parseUrl(candidate);
+  }
+
+  function resolveDashboardSettings(defaults = {}) {
+    const settings = {};
+
+    const autoUpdateValue =
+      defaults.dashboardAutoUpdate ?? defaults.dashboardAutoRefresh;
+    if (autoUpdateValue !== undefined) {
+      settings.autoUpdate = parseBoolean(autoUpdateValue);
+    }
+
+    const refreshSource =
+      defaults.dashboardRefreshIntervalMs ??
+      defaults.dashboardRefreshMs ??
+      defaults.dashboardRefreshInterval ??
+      (defaults.dashboardRefreshSeconds
+        ? Number(defaults.dashboardRefreshSeconds) * 1000
+        : undefined);
+
+    if (refreshSource !== undefined) {
+      const parsed = parseNumber(refreshSource, 0);
+      if (parsed > 0) {
+        settings.refreshIntervalMs = parsed;
+      }
+    }
+
+    return settings;
+  }
+
   function sanitizeSheetId(value) {
     if (!value) {
       return "";
@@ -310,7 +361,17 @@
       description: defaults.description || "",
       certificateMessage: defaults.certificateMessage || "",
       strings: normalizeStrings(defaults.strings),
-      modules: modulesWithQuestions
+      modules: modulesWithQuestions,
+      sessionApiBaseUrl: resolveSessionApiBaseUrl(defaults),
+      dashboard: resolveDashboardSettings(defaults)
+    };
+  }
+
+  function buildSessionSettings(dataset) {
+    const defaults = normalizeDefaults(dataset.defaults);
+    return {
+      sessionApiBaseUrl: resolveSessionApiBaseUrl(defaults),
+      dashboard: resolveDashboardSettings(defaults)
     };
   }
 
@@ -387,6 +448,12 @@
     return deepClone(config);
   }
 
+  async function loadSessionSettings(options = {}) {
+    const dataset = await loadDataset(options);
+    const settings = buildSessionSettings(dataset);
+    return deepClone(settings);
+  }
+
   async function listModules(options = {}) {
     const config = await loadQuizConfig(options);
     return config.modules.map(({ id, title, questionsPerSession }) => ({
@@ -446,6 +513,7 @@
   const api = {
     DEFAULT_SHEET_ID,
     loadQuizConfig,
+    loadSessionSettings,
     listModules,
     listQuestions,
     getQuestionDetail,
