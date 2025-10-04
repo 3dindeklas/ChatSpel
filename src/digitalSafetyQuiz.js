@@ -18,6 +18,10 @@
     "resetButton"
   ];
 
+  const GOOGLE_APPS_SCRIPT_HOST = "https://script.google.com";
+  const GOOGLE_APPS_SCRIPT_CONTENT_HOST_SUFFIX = ".googleusercontent.com";
+  const BRIDGE_REQUEST_TIMEOUT_MS = 20000;
+
   function toText(value) {
     if (value === null || typeof value === "undefined") {
       return "";
@@ -275,6 +279,37 @@
     }
   }
 
+  function isTrustedBridgeOrigin(origin, requestUrl) {
+    if (!origin) {
+      return false;
+    }
+
+    const trimmed = String(origin).trim();
+    if (!trimmed) {
+      return false;
+    }
+
+    if (
+      trimmed === GOOGLE_APPS_SCRIPT_HOST ||
+      trimmed.endsWith(GOOGLE_APPS_SCRIPT_CONTENT_HOST_SUFFIX)
+    ) {
+      return true;
+    }
+
+    if (requestUrl && typeof window !== "undefined") {
+      try {
+        const parsed = new URL(requestUrl, window.location.href);
+        if (parsed.origin === trimmed) {
+          return true;
+        }
+      } catch (error) {
+        /* ignore */
+      }
+    }
+
+    return false;
+  }
+
   function shuffleArray(input = []) {
     const array = Array.isArray(input) ? [...input] : [];
     for (let i = array.length - 1; i > 0; i -= 1) {
@@ -314,6 +349,10 @@
       this.remoteEnabled =
         typeof fetch === "function" && Boolean(this.apiBaseUrl);
       this.database = new IndexedDbAdapter();
+      this._bridgeTimeoutMs =
+        typeof options.bridgeTimeoutMs === "number"
+          ? Math.max(options.bridgeTimeoutMs, 1000)
+          : BRIDGE_REQUEST_TIMEOUT_MS;
 
       const persistencePreference = options.enableLocalPersistence;
       if (persistencePreference === true) {
@@ -393,7 +432,7 @@
         const crossOrigin = isCrossOriginUrl(url);
 
         if (crossOrigin && typeof window !== "undefined") {
-          return await this._sendJsonpRequest(url, {
+          return await this._sendBridgeRequest(url, {
             method,
             body: options.body
           });
@@ -436,27 +475,48 @@
       }
     }
 
-    _sendJsonpRequest(url, options = {}) {
-      if (typeof document === "undefined") {
+    _sendBridgeRequest(url, options = {}) {
+      if (typeof window === "undefined" || typeof document === "undefined") {
         return Promise.resolve(null);
       }
 
       const method = (options.method || "GET").toUpperCase();
       const payload = options.body;
-      return new Promise((resolve) => {
-        const callbackName = `__dsq_jsonp_${Date.now()}_${Math.floor(
-          Math.random() * 1e6
-        )}`;
+      const requestId = generateId("dsqBridge");
+      const targetOrigin = window.location ? window.location.origin : "";
 
+      return new Promise((resolve) => {
         let settled = false;
-        const cleanup = () => {
-          if (window[callbackName]) {
-            try {
-              delete window[callbackName];
-            } catch (error) {
-              window[callbackName] = undefined;
-            }
+        let timeoutId = null;
+        let iframe = null;
+
+        const handleMessage = (event) => {
+          if (!isTrustedBridgeOrigin(event.origin, url)) {
+            return;
           }
+
+          const message = event.data;
+          if (
+            !message ||
+            message.source !== "apps-script-bridge" ||
+            message.requestId !== requestId
+          ) {
+            return;
+          }
+
+          finalize(message.ok === false ? null : message.data || null);
+        };
+
+        const cleanup = () => {
+          window.removeEventListener("message", handleMessage);
+          if (timeoutId) {
+            window.clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+          if (iframe && iframe.parentNode) {
+            iframe.parentNode.removeChild(iframe);
+          }
+          iframe = null;
         };
 
         const finalize = (value) => {
@@ -465,19 +525,22 @@
           }
           settled = true;
           cleanup();
-          if (script.parentNode) {
-            script.parentNode.removeChild(script);
-          }
           resolve(value);
         };
 
-        window[callbackName] = (data) => {
-          finalize(data || null);
-        };
+        window.addEventListener("message", handleMessage);
 
-        const script = document.createElement("script");
+        iframe = document.createElement("iframe");
+        iframe.style.display = "none";
+        iframe.setAttribute("aria-hidden", "true");
+        iframe.tabIndex = -1;
+
         const params = new URLSearchParams();
-        params.set("callback", callbackName);
+        params.set("transport", "postmessage");
+        params.set("requestId", requestId);
+        if (targetOrigin) {
+          params.set("origin", targetOrigin);
+        }
         params.set("method", method);
         if (payload !== undefined) {
           params.set("payload", payload);
@@ -485,20 +548,23 @@
         params.set("_", String(Date.now()));
 
         const separator = url.includes("?") ? "&" : "?";
-        script.src = `${url}${separator}${params.toString()}`;
-        script.async = true;
+        iframe.src = `${url}${separator}${params.toString()}`;
 
-        script.onerror = () => {
+        iframe.onerror = () => {
           finalize(null);
         };
 
-        const target = document.head || document.body || document.documentElement;
-        if (!target) {
+        const host = document.body || document.documentElement;
+        if (!host) {
           finalize(null);
           return;
         }
 
-        target.appendChild(script);
+        host.appendChild(iframe);
+
+        timeoutId = window.setTimeout(() => {
+          finalize(null);
+        }, this._bridgeTimeoutMs);
       });
     }
 

@@ -5,6 +5,12 @@
 
 const SPREADSHEET_ID = "PASTE_SPREADSHEET_ID_HERE"; // <-- vervang door je eigen ID
 const SESSION_TIMEOUT_MS = 60000;
+const BRIDGE_ALLOWED_ORIGINS = [
+  "https://3dindeklas.github.io",
+  "https://3dindeklas.nl",
+  "http://localhost:3000",
+  "http://localhost:4173"
+];
 
 const SHEET_NAMES = {
   sessions: "Sessions",
@@ -397,6 +403,10 @@ function resolveMethodOverride(method, request) {
 }
 
 function jsonResponse(body, request) {
+  if (shouldUsePostMessageTransport(request)) {
+    return postMessageResponse(body, request);
+  }
+
   const payload = JSON.stringify(body || {});
   const callback = extractJsonpCallback(request);
 
@@ -409,6 +419,94 @@ function jsonResponse(body, request) {
 
 function emptyResponse() {
   return ContentService.createTextOutput("").setMimeType(ContentService.MimeType.TEXT);
+}
+
+function shouldUsePostMessageTransport(request) {
+  if (!request || !request.parameter) {
+    return false;
+  }
+  const transport = request.parameter.transport;
+  if (!transport) {
+    return false;
+  }
+  return String(transport).toLowerCase() === "postmessage";
+}
+
+function postMessageResponse(body, request) {
+  const payload = JSON.stringify(body || {});
+  const safePayload = payload
+    .replace(/<\/script/gi, "<\/script")
+    .replace(/</g, "\u003c")
+    .replace(/>/g, "\u003e");
+
+  const requestId = (request && request.parameter && request.parameter.requestId) || "";
+  const targetOrigin = resolveTargetOrigin(request);
+  const allowedTarget = targetOrigin || "*";
+
+  const html = [
+    "<!DOCTYPE html>",
+    "<html>",
+    "<head><meta charset="utf-8"></head>",
+    "<body>",
+    "<script>(function(){",
+    "var targetOrigin=" + JSON.stringify(allowedTarget) + ";",
+    "var message={",
+    "source:'apps-script-bridge',",
+    "requestId=" + JSON.stringify(requestId) + ",",
+    "ok:true,",
+    "data:" + safePayload,
+    "};",
+    "function send(){",
+    "try {",
+    "if (window.parent && window.parent !== window) {",
+    "window.parent.postMessage(message, targetOrigin || '*');",
+    "}",
+    "} catch (error) {}",
+    "}",
+    "if (document.readyState === 'complete') {",
+    "send();",
+    "} else {",
+    "window.addEventListener('load', send);",
+    "}",
+    "window.setTimeout(send, 50);",
+    "window.setTimeout(send, 200);",
+    "})();</script>",
+    "</body>",
+    "</html>"
+  ].join("\n");
+
+  return HtmlService.createHtmlOutput(html).setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+
+function resolveTargetOrigin(request) {
+  if (!request || !request.parameter) {
+    return "";
+  }
+
+  var origin = request.parameter.origin || request.parameter.targetOrigin;
+  if (!origin) {
+    return "";
+  }
+
+  var trimmed = String(origin).trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (trimmed === "*") {
+    return "";
+  }
+
+  var normalized = trimmed.replace(/\/+$/, "");
+
+  for (var index = 0; index < BRIDGE_ALLOWED_ORIGINS.length; index += 1) {
+    if (normalized === BRIDGE_ALLOWED_ORIGINS[index]) {
+      return normalized;
+    }
+  }
+
+  return "";
 }
 
 function extractJsonpCallback(request) {
