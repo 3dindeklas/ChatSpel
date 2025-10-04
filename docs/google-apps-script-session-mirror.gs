@@ -322,8 +322,8 @@ function doPost(e) {
 }
 
 /** Entry point for OPTIONS (CORS preflight) requests */
-function doOptions(e) {
-  return emptyResponse(e);
+function doOptions() {
+  return emptyResponse();
 }
 
 function handleRequest(method, e) {
@@ -332,11 +332,13 @@ function handleRequest(method, e) {
     const path = extractPath(e);
     const segments = path ? path.split("/").filter(Boolean) : [];
 
-    if (method === "GET") {
+    const actualMethod = resolveMethodOverride(method, e);
+
+    if (actualMethod === "GET") {
       return handleGet(segments, e);
     }
 
-    if (method === "POST") {
+    if (actualMethod === "POST") {
       return handlePost(segments, e);
     }
 
@@ -358,6 +360,14 @@ function extractPath(e) {
 }
 
 function parsePayload(e) {
+  if (e && e.parameter && typeof e.parameter.payload === "string") {
+    try {
+      return JSON.parse(e.parameter.payload);
+    } catch (error) {
+      // ignore and fall through to postData parsing
+    }
+  }
+
   if (!e || !e.postData || !e.postData.contents) {
     return {};
   }
@@ -368,66 +378,59 @@ function parsePayload(e) {
   }
 }
 
+function resolveMethodOverride(method, request) {
+  if (method !== "GET" || !request || !request.parameter) {
+    return method;
+  }
+
+  const override = request.parameter.method || request.parameter._method;
+  if (!override) {
+    return method;
+  }
+
+  const normalized = String(override).trim().toUpperCase();
+  if (normalized === "POST") {
+    return "POST";
+  }
+
+  return method;
+}
+
 function jsonResponse(body, request) {
   const payload = JSON.stringify(body || {});
-  const output = ContentService.createTextOutput(payload).setMimeType(ContentService.MimeType.JSON);
-  return applyCors(output, request);
+  const callback = extractJsonpCallback(request);
+
+  if (callback) {
+    return ContentService.createTextOutput(`${callback}(${payload});`).setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+
+  return ContentService.createTextOutput(payload).setMimeType(ContentService.MimeType.JSON);
 }
 
-function emptyResponse(request) {
-  const output = ContentService.createTextOutput("").setMimeType(ContentService.MimeType.TEXT);
-  return applyCors(output, request);
+function emptyResponse() {
+  return ContentService.createTextOutput("").setMimeType(ContentService.MimeType.TEXT);
 }
 
-function applyCors(output, request) {
-  const headers = buildCorsHeaders(request);
-
-  if (!headers) {
-    return output;
+function extractJsonpCallback(request) {
+  if (!request || !request.parameter) {
+    return "";
   }
 
-  if (output && typeof output.setHeaders === "function") {
-    output.setHeaders(headers);
-    return output;
+  const raw = request.parameter.callback || request.parameter.cb;
+  if (!raw) {
+    return "";
   }
 
-  if (output && typeof output.setHeader === "function") {
-    Object.keys(headers).forEach(function (key) {
-      output.setHeader(key, headers[key]);
-    });
-    return output;
+  const callback = String(raw).trim();
+  if (!callback) {
+    return "";
   }
 
-  if (output && typeof output.addHeader === "function") {
-    Object.keys(headers).forEach(function (key) {
-      output.addHeader(key, headers[key]);
-    });
+  if (!/^[$A-Z_][0-9A-Z_.$]*$/i.test(callback)) {
+    return "";
   }
 
-  return output;
-}
-
-const ALLOWED_ORIGINS = ["https://3dindeklas.github.io", "https://3dindeklas.nl", "*"];
-
-function buildCorsHeaders(request) {
-  var requestedOrigin = null;
-
-  if (request && request.parameter && request.parameter.origin) {
-    requestedOrigin = String(request.parameter.origin);
-  }
-
-  var allowedOrigin = "*";
-
-  if (requestedOrigin && ALLOWED_ORIGINS.indexOf(requestedOrigin) !== -1 && requestedOrigin !== "*") {
-    allowedOrigin = requestedOrigin;
-  }
-
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Max-Age": "3600",
-  };
+  return callback;
 }
 
 function getSpreadsheet() {

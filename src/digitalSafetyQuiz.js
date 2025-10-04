@@ -389,18 +389,25 @@
 
       try {
         const url = this._buildUrl(path);
+        const method = (options.method || "GET").toUpperCase();
         const crossOrigin = isCrossOriginUrl(url);
+
+        if (crossOrigin && typeof window !== "undefined") {
+          return await this._sendJsonpRequest(url, {
+            method,
+            body: options.body
+          });
+        }
+
         const fetchOptions = {
-          method: options.method || "GET",
+          method,
           credentials: "same-origin",
           cache: options.cache || "no-store"
         };
 
         const headers = { ...(options.headers || {}) };
         if (options.body !== undefined && !headers["Content-Type"]) {
-          headers["Content-Type"] = crossOrigin
-            ? "text/plain;charset=utf-8"
-            : "application/json";
+          headers["Content-Type"] = "application/json";
         }
 
         if (Object.keys(headers).length) {
@@ -409,10 +416,6 @@
 
         if (options.body !== undefined) {
           fetchOptions.body = options.body;
-        }
-
-        if (crossOrigin) {
-          fetchOptions.mode = "cors";
         }
 
         const response = await fetch(url, fetchOptions);
@@ -431,6 +434,72 @@
       } catch (error) {
         return null;
       }
+    }
+
+    _sendJsonpRequest(url, options = {}) {
+      if (typeof document === "undefined") {
+        return Promise.resolve(null);
+      }
+
+      const method = (options.method || "GET").toUpperCase();
+      const payload = options.body;
+      return new Promise((resolve) => {
+        const callbackName = `__dsq_jsonp_${Date.now()}_${Math.floor(
+          Math.random() * 1e6
+        )}`;
+
+        let settled = false;
+        const cleanup = () => {
+          if (window[callbackName]) {
+            try {
+              delete window[callbackName];
+            } catch (error) {
+              window[callbackName] = undefined;
+            }
+          }
+        };
+
+        const finalize = (value) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          cleanup();
+          if (script.parentNode) {
+            script.parentNode.removeChild(script);
+          }
+          resolve(value);
+        };
+
+        window[callbackName] = (data) => {
+          finalize(data || null);
+        };
+
+        const script = document.createElement("script");
+        const params = new URLSearchParams();
+        params.set("callback", callbackName);
+        params.set("method", method);
+        if (payload !== undefined) {
+          params.set("payload", payload);
+        }
+        params.set("_", String(Date.now()));
+
+        const separator = url.includes("?") ? "&" : "?";
+        script.src = `${url}${separator}${params.toString()}`;
+        script.async = true;
+
+        script.onerror = () => {
+          finalize(null);
+        };
+
+        const target = document.head || document.body || document.documentElement;
+        if (!target) {
+          finalize(null);
+          return;
+        }
+
+        target.appendChild(script);
+      });
     }
 
     _startRemotePolling() {
