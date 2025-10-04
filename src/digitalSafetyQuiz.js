@@ -796,6 +796,15 @@
 
       let hasRecordedScore = false;
 
+      const nextQuestionButton = createElement("button", {
+        className: "dsq-button dsq-button-secondary",
+        text: this.config.strings.nextQuestion,
+        attrs: { type: "button" }
+      });
+      nextQuestionButton.disabled = true;
+
+      let hasRecordedScore = false;
+
       form.addEventListener("submit", (event) => {
         event.preventDefault();
         if (form.classList.contains("dsq-question-locked")) {
@@ -811,10 +820,7 @@
             question.type === "multiple"
               ? this.config.strings.selectMultiple
               : this.config.strings.selectOptions;
-          feedbackEl.classList.remove(
-            "dsq-feedback-correct",
-            "dsq-feedback-incorrect"
-          );
+          feedbackEl.classList.remove("dsq-feedback-correct");
           feedbackEl.classList.add("dsq-feedback-incorrect");
           return;
         }
@@ -839,15 +845,20 @@
             this.score += 1;
             hasRecordedScore = true;
           }
+          feedbackEl.textContent = question.feedback?.correct || this.config.strings.feedbackCorrect;
+          feedbackEl.classList.remove("dsq-feedback-incorrect");
+          feedbackEl.classList.add("dsq-feedback-correct");
 
-          form.classList.add("dsq-question-locked");
           button.disabled = true;
           form.querySelectorAll("input").forEach((input) => {
             input.disabled = true;
           });
-
           nextQuestionButton.disabled = false;
           nextQuestionButton.focus();
+        } else {
+          feedbackEl.textContent = question.feedback?.incorrect || this.config.strings.feedbackIncorrect;
+          feedbackEl.classList.remove("dsq-feedback-correct");
+          feedbackEl.classList.add("dsq-feedback-incorrect");
         }
       });
 
@@ -858,7 +869,6 @@
         if (nextQuestionButton.disabled) {
           return;
         }
-
         this.currentQuestionIndex += 1;
         this.renderQuestion();
       });
