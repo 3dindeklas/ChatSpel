@@ -794,16 +794,7 @@
       });
       nextQuestionButton.disabled = true;
 
-      let hasRecordedScore = false;
-
-      const nextQuestionButton = createElement("button", {
-        className: "dsq-button dsq-button-secondary",
-        text: this.config.strings.nextQuestion,
-        attrs: { type: "button" }
-      });
-      nextQuestionButton.disabled = true;
-
-      let hasRecordedScore = false;
+      let hasRecordedScore = this._getAttemptCount(module.id, question.id) > 0;
 
       form.addEventListener("submit", (event) => {
         event.preventDefault();
