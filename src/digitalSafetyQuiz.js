@@ -18,6 +18,10 @@
     "resetButton"
   ];
 
+  const GOOGLE_APPS_SCRIPT_HOST = "https://script.google.com";
+  const GOOGLE_APPS_SCRIPT_CONTENT_HOST_SUFFIX = ".googleusercontent.com";
+  const BRIDGE_REQUEST_TIMEOUT_MS = 20000;
+
   function toText(value) {
     if (value === null || typeof value === "undefined") {
       return "";
@@ -275,6 +279,37 @@
     }
   }
 
+  function isTrustedBridgeOrigin(origin, requestUrl) {
+    if (!origin) {
+      return false;
+    }
+
+    const trimmed = String(origin).trim();
+    if (!trimmed) {
+      return false;
+    }
+
+    if (
+      trimmed === GOOGLE_APPS_SCRIPT_HOST ||
+      trimmed.endsWith(GOOGLE_APPS_SCRIPT_CONTENT_HOST_SUFFIX)
+    ) {
+      return true;
+    }
+
+    if (requestUrl && typeof window !== "undefined") {
+      try {
+        const parsed = new URL(requestUrl, window.location.href);
+        if (parsed.origin === trimmed) {
+          return true;
+        }
+      } catch (error) {
+        /* ignore */
+      }
+    }
+
+    return false;
+  }
+
   function shuffleArray(input = []) {
     const array = Array.isArray(input) ? [...input] : [];
     for (let i = array.length - 1; i > 0; i -= 1) {
@@ -314,6 +349,10 @@
       this.remoteEnabled =
         typeof fetch === "function" && Boolean(this.apiBaseUrl);
       this.database = new IndexedDbAdapter();
+      this._bridgeTimeoutMs =
+        typeof options.bridgeTimeoutMs === "number"
+          ? Math.max(options.bridgeTimeoutMs, 1000)
+          : BRIDGE_REQUEST_TIMEOUT_MS;
 
       const persistencePreference = options.enableLocalPersistence;
       if (persistencePreference === true) {
@@ -389,18 +428,25 @@
 
       try {
         const url = this._buildUrl(path);
+        const method = (options.method || "GET").toUpperCase();
         const crossOrigin = isCrossOriginUrl(url);
+
+        if (crossOrigin && typeof window !== "undefined") {
+          return await this._sendBridgeRequest(url, {
+            method,
+            body: options.body
+          });
+        }
+
         const fetchOptions = {
-          method: options.method || "GET",
+          method,
           credentials: "same-origin",
           cache: options.cache || "no-store"
         };
 
         const headers = { ...(options.headers || {}) };
         if (options.body !== undefined && !headers["Content-Type"]) {
-          headers["Content-Type"] = crossOrigin
-            ? "text/plain;charset=utf-8"
-            : "application/json";
+          headers["Content-Type"] = "application/json";
         }
 
         if (Object.keys(headers).length) {
@@ -409,10 +455,6 @@
 
         if (options.body !== undefined) {
           fetchOptions.body = options.body;
-        }
-
-        if (crossOrigin) {
-          fetchOptions.mode = "cors";
         }
 
         const response = await fetch(url, fetchOptions);
@@ -431,6 +473,99 @@
       } catch (error) {
         return null;
       }
+    }
+
+    _sendBridgeRequest(url, options = {}) {
+      if (typeof window === "undefined" || typeof document === "undefined") {
+        return Promise.resolve(null);
+      }
+
+      const method = (options.method || "GET").toUpperCase();
+      const payload = options.body;
+      const requestId = generateId("dsqBridge");
+      const targetOrigin = window.location ? window.location.origin : "";
+
+      return new Promise((resolve) => {
+        let settled = false;
+        let timeoutId = null;
+        let iframe = null;
+
+        const handleMessage = (event) => {
+          if (!isTrustedBridgeOrigin(event.origin, url)) {
+            return;
+          }
+
+          const message = event.data;
+          if (
+            !message ||
+            message.source !== "apps-script-bridge" ||
+            message.requestId !== requestId
+          ) {
+            return;
+          }
+
+          finalize(message.ok === false ? null : message.data || null);
+        };
+
+        const cleanup = () => {
+          window.removeEventListener("message", handleMessage);
+          if (timeoutId) {
+            window.clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+          if (iframe && iframe.parentNode) {
+            iframe.parentNode.removeChild(iframe);
+          }
+          iframe = null;
+        };
+
+        const finalize = (value) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          cleanup();
+          resolve(value);
+        };
+
+        window.addEventListener("message", handleMessage);
+
+        iframe = document.createElement("iframe");
+        iframe.style.display = "none";
+        iframe.setAttribute("aria-hidden", "true");
+        iframe.tabIndex = -1;
+
+        const params = new URLSearchParams();
+        params.set("transport", "postmessage");
+        params.set("requestId", requestId);
+        if (targetOrigin) {
+          params.set("origin", targetOrigin);
+        }
+        params.set("method", method);
+        if (payload !== undefined) {
+          params.set("payload", payload);
+        }
+        params.set("_", String(Date.now()));
+
+        const separator = url.includes("?") ? "&" : "?";
+        iframe.src = `${url}${separator}${params.toString()}`;
+
+        iframe.onerror = () => {
+          finalize(null);
+        };
+
+        const host = document.body || document.documentElement;
+        if (!host) {
+          finalize(null);
+          return;
+        }
+
+        host.appendChild(iframe);
+
+        timeoutId = window.setTimeout(() => {
+          finalize(null);
+        }, this._bridgeTimeoutMs);
+      });
     }
 
     _startRemotePolling() {
