@@ -1,30 +1,29 @@
 (function (global) {
   "use strict";
 
-  const defaultConfig = {
-    title: "Digitaal Veiligheidsrijbewijs",
-    description:
-      "Doorloop de modules, beantwoord de vragen en verdien het certificaat voor digitale veiligheid!",
-    modules: [],
-    certificateMessage:
-      "Gefeliciteerd! Je hebt alle modules voltooid en toont dat jij veilig en slim online kunt zijn.",
-    strings: {
-      startButton: "Start de quiz",
-      nextModule: "Volgende module",
-      continue: "Ga verder",
-      checkAnswer: "Controleer antwoord",
-      nextQuestion: "Volgende vraag",
-      selectOptions: "Selecteer je antwoord",
-      selectMultiple: "Selecteer een of meer antwoorden",
-      feedbackCorrect: "Goed gedaan!",
-      feedbackIncorrect: "Probeer het nog eens.",
-      moduleComplete: "Module afgerond!",
-      certificateTitle: "Jouw digitale veiligheidsrijbewijs",
-      enterName: "Vul je naam in voor op het certificaat",
-      downloadButton: "Download als afbeelding",
-      resetButton: "Opnieuw beginnen"
+  const STRING_KEYS = [
+    "startButton",
+    "nextModule",
+    "continue",
+    "checkAnswer",
+    "nextQuestion",
+    "selectOptions",
+    "selectMultiple",
+    "feedbackCorrect",
+    "feedbackIncorrect",
+    "moduleComplete",
+    "certificateTitle",
+    "enterName",
+    "downloadButton",
+    "resetButton"
+  ];
+
+  function toText(value) {
+    if (value === null || typeof value === "undefined") {
+      return "";
     }
-  };
+    return String(value);
+  }
   function createElement(tag, options = {}) {
     const el = document.createElement(tag);
     if (options.className) {
@@ -1033,56 +1032,93 @@
     }
   }
 
-  function normalizeConfig(userConfig = {}) {
-    const config = JSON.parse(JSON.stringify(defaultConfig));
-    if (!userConfig) {
-      return config;
+  function normalizeStringsInput(rawStrings) {
+    const strings = {};
+    if (rawStrings && typeof rawStrings === "object") {
+      Object.keys(rawStrings).forEach((key) => {
+        const value = rawStrings[key];
+        if (typeof value === "string") {
+          strings[key] = value;
+        } else if (value !== null && typeof value !== "undefined") {
+          strings[key] = String(value);
+        }
+      });
     }
 
-    if (userConfig.title) config.title = userConfig.title;
-    if (userConfig.description) config.description = userConfig.description;
-    if (userConfig.modules) config.modules = userConfig.modules;
-    if (userConfig.certificateMessage) {
-      config.certificateMessage = userConfig.certificateMessage;
-    }
-    if (userConfig.strings) {
-      config.strings = { ...config.strings, ...userConfig.strings };
-    }
-
-    config.modules = config.modules.map((module) => {
-      const normalizedModule = { ...module };
-      if (
-        !Array.isArray(normalizedModule.questionPool) &&
-        Array.isArray(normalizedModule.questions)
-      ) {
-        normalizedModule.questionPool = normalizedModule.questions;
+    STRING_KEYS.forEach((key) => {
+      if (typeof strings[key] !== "string") {
+        strings[key] = "";
       }
-
-      normalizedModule.questionPool = Array.isArray(normalizedModule.questionPool)
-        ? normalizedModule.questionPool.map((question) =>
-            JSON.parse(JSON.stringify(question))
-          )
-        : [];
-
-      const poolLength = normalizedModule.questionPool.length;
-
-      if (
-        typeof normalizedModule.questionsPerSession !== "number" ||
-        Number.isNaN(normalizedModule.questionsPerSession) ||
-        normalizedModule.questionsPerSession <= 0
-      ) {
-        normalizedModule.questionsPerSession = Math.min(5, poolLength);
-      } else {
-        const desired = Math.floor(normalizedModule.questionsPerSession);
-        normalizedModule.questionsPerSession =
-          poolLength > 0 ? Math.max(1, Math.min(desired, poolLength)) : 0;
-      }
-
-      delete normalizedModule.questions;
-      return normalizedModule;
     });
 
-    return config;
+    return strings;
+  }
+
+  function deepCloneQuestion(question) {
+    try {
+      return JSON.parse(JSON.stringify(question));
+    } catch (error) {
+      return { ...question };
+    }
+  }
+
+  function normalizeModule(module) {
+    if (!module || typeof module !== "object") {
+      return {
+        questionPool: [],
+        questionsPerSession: 0,
+        tips: []
+      };
+    }
+
+    const normalizedModule = { ...module };
+    const poolSource = Array.isArray(normalizedModule.questionPool)
+      ? normalizedModule.questionPool
+      : Array.isArray(normalizedModule.questions)
+        ? normalizedModule.questions
+        : [];
+
+    normalizedModule.questionPool = poolSource
+      .filter(Boolean)
+      .map((question) => deepCloneQuestion(question));
+
+    normalizedModule.tips = Array.isArray(normalizedModule.tips)
+      ? normalizedModule.tips.map((tip) => toText(tip))
+      : [];
+
+    const poolLength = normalizedModule.questionPool.length;
+
+    if (
+      typeof normalizedModule.questionsPerSession !== "number" ||
+      Number.isNaN(normalizedModule.questionsPerSession) ||
+      normalizedModule.questionsPerSession <= 0
+    ) {
+      normalizedModule.questionsPerSession = Math.min(5, poolLength);
+    } else {
+      const desired = Math.floor(normalizedModule.questionsPerSession);
+      normalizedModule.questionsPerSession =
+        poolLength > 0 ? Math.max(1, Math.min(desired, poolLength)) : 0;
+    }
+
+    delete normalizedModule.questions;
+    return normalizedModule;
+  }
+
+  function normalizeConfig(userConfig = {}) {
+    const hasConfig = userConfig && typeof userConfig === "object";
+    const modules = hasConfig && Array.isArray(userConfig.modules)
+      ? userConfig.modules
+      : [];
+
+    return {
+      title: hasConfig ? toText(userConfig.title) : "",
+      description: hasConfig ? toText(userConfig.description) : "",
+      certificateMessage: hasConfig
+        ? toText(userConfig.certificateMessage)
+        : "",
+      strings: normalizeStringsInput(hasConfig ? userConfig.strings : {}),
+      modules: modules.map((module) => normalizeModule(module))
+    };
   }
 
   class DigitalSafetyQuiz {
