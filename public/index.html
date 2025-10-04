@@ -31,12 +31,51 @@
           return new URL(normalized, baseUrl).toString();
         };
 
-        try {
-          const response = await fetch(buildApiUrl("api/quiz-config"));
-          if (!response.ok) {
-            throw new Error("Kon configuratie niet laden");
+        const buildDataUrl = (path) => new URL(path, baseUrl).toString();
+
+        const uniqueUrls = (urls) => {
+          const seen = new Set();
+          return urls.filter((url) => {
+            if (seen.has(url)) {
+              return false;
+            }
+            seen.add(url);
+            return true;
+          });
+        };
+
+        const fetchConfigFromUrls = async (urls) => {
+          let lastError = null;
+          for (const url of uniqueUrls(urls)) {
+            try {
+              const response = await fetch(url, {
+                credentials: "same-origin",
+                cache: "no-store"
+              });
+              if (!response.ok) {
+                lastError = new Error(
+                  `Kon configuratie niet laden: ${response.status}`
+                );
+                continue;
+              }
+              return await response.json();
+            } catch (error) {
+              lastError = error;
+            }
           }
-          const config = await response.json();
+          if (lastError) {
+            throw lastError;
+          }
+          throw new Error("Geen configuratiebronnen beschikbaar");
+        };
+
+        try {
+          const config = await fetchConfigFromUrls([
+            buildApiUrl("api/quiz-config"),
+            buildDataUrl("../data/quizData.json"),
+            buildDataUrl("./data/quizData.json"),
+            new URL("/data/quizData.json", window.location.origin).toString()
+          ]);
           new DigitalSafetyQuiz({
             container: "#quiz",
             config,
@@ -46,6 +85,9 @@
           if (container) {
             container.textContent =
               "De quiz kon niet worden geladen. Probeer het later opnieuw.";
+          }
+          if (window.console && typeof window.console.error === "function") {
+            window.console.error("Kon quizconfiguratie niet laden", error);
           }
         }
       });
