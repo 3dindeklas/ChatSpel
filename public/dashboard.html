@@ -11,10 +11,11 @@
       <section id="dashboard" class="dsq-card"></section>
     </div>
 
+    <script src="../src/googleSheetsConfigClient.js"></script>
     <script src="../src/digitalSafetyQuiz.js"></script>
     <script src="../src/quizDashboard.js"></script>
     <script>
-      document.addEventListener("DOMContentLoaded", function () {
+      document.addEventListener("DOMContentLoaded", async function () {
         const pageBaseUrl = new URL("./", window.location.href);
 
         const resolveAbsoluteUrl = (value) => {
@@ -34,18 +35,93 @@
           }
         };
 
-        const sessionApiBaseUrl = resolveAbsoluteUrl(
-          window.__CHAT_SPEL_SESSION_API_BASE_URL__
-        );
+        const sheetOptions = {};
+        const sheetOptionMappings = [
+          ["sheetId", "__CHAT_SPEL_GOOGLE_SHEETS_ID__"],
+          ["defaultsSheet", "__CHAT_SPEL_GOOGLE_SHEETS_DEFAULTS_SHEET__"],
+          ["modulesSheet", "__CHAT_SPEL_GOOGLE_SHEETS_MODULES_SHEET__"],
+          ["questionsSheet", "__CHAT_SPEL_GOOGLE_SHEETS_QUESTIONS_SHEET__"],
+          ["optionsSheet", "__CHAT_SPEL_GOOGLE_SHEETS_OPTIONS_SHEET__"]
+        ];
 
-        if (!window.__CHAT_SPEL_SESSION_API_BASE_URL__ && sessionApiBaseUrl) {
-          window.__CHAT_SPEL_SESSION_API_BASE_URL__ = sessionApiBaseUrl;
+        sheetOptionMappings.forEach(([optionKey, globalKey]) => {
+          const value = window[globalKey];
+          if (typeof value === "string" && value.trim()) {
+            sheetOptions[optionKey] = value.trim();
+          }
+        });
+
+        if (
+          !window.__CHAT_SPEL_GOOGLE_SHEETS_ID__ &&
+          window.DSQGoogleSheets &&
+          window.DSQGoogleSheets.DEFAULT_SHEET_ID
+        ) {
+          window.__CHAT_SPEL_GOOGLE_SHEETS_ID__ =
+            window.DSQGoogleSheets.DEFAULT_SHEET_ID;
         }
 
-        createDigitalSafetyDashboard({
+        const loadSessionSettings = async () => {
+          if (
+            !window.DSQGoogleSheets ||
+            typeof window.DSQGoogleSheets.loadSessionSettings !== "function"
+          ) {
+            throw new Error("Google Sheets loader is niet beschikbaar");
+          }
+          return window.DSQGoogleSheets.loadSessionSettings(sheetOptions);
+        };
+
+        let sessionSettings = null;
+        try {
+          sessionSettings = await loadSessionSettings();
+        } catch (error) {
+          if (window.console && typeof window.console.warn === "function") {
+            window.console.warn(
+              "Kon dashboardconfiguratie niet uit Google Sheets laden",
+              error
+            );
+          }
+        }
+
+        const resolvedSessionApiBaseUrl = resolveAbsoluteUrl(
+          window.__CHAT_SPEL_SESSION_API_BASE_URL__ ||
+            (sessionSettings ? sessionSettings.sessionApiBaseUrl : "")
+        );
+
+        if (
+          !window.__CHAT_SPEL_SESSION_API_BASE_URL__ &&
+          resolvedSessionApiBaseUrl
+        ) {
+          window.__CHAT_SPEL_SESSION_API_BASE_URL__ = resolvedSessionApiBaseUrl;
+        }
+
+        if (!resolvedSessionApiBaseUrl && window.console) {
+          const { warn } = window.console;
+          if (typeof warn === "function") {
+            warn(
+              "DigitalSafetyDashboard: er is geen session API base URL ingesteld. Live-data wordt lokaal opgeslagen."
+            );
+          }
+        }
+
+        const dashboardOptions = {
           container: "#dashboard",
-          apiBaseUrl: sessionApiBaseUrl
-        });
+          apiBaseUrl: resolvedSessionApiBaseUrl
+        };
+
+        if (sessionSettings && sessionSettings.dashboard) {
+          if (
+            typeof sessionSettings.dashboard.refreshIntervalMs === "number" &&
+            sessionSettings.dashboard.refreshIntervalMs > 0
+          ) {
+            dashboardOptions.refreshIntervalMs =
+              sessionSettings.dashboard.refreshIntervalMs;
+          }
+          if (typeof sessionSettings.dashboard.autoUpdate === "boolean") {
+            dashboardOptions.autoUpdate = sessionSettings.dashboard.autoUpdate;
+          }
+        }
+
+        createDigitalSafetyDashboard(dashboardOptions);
       });
     </script>
   </body>

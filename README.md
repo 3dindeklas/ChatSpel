@@ -33,10 +33,10 @@ Ga naar [http://localhost:3000/questions.html](http://localhost:3000/questions.h
 
 1. Publiceer de bestanden `googleSheetsConfigClient.js`, `digitalSafetyQuiz.js` en `digitalSafetyQuiz.css` op een locatie die jouw website kan laden (bijvoorbeeld je eigen hosting of een CDN).
 2. Voeg op je pagina een element toe waar de quiz in mag landen, bij voorkeur een leeg `<div>`.
-3. Stel vóór het laden van de scripts de gewenste globale variabelen in:
+3. Stel vóór het laden van de scripts de gewenste globale variabelen in (optioneel):
    - `window.__CHAT_SPEL_GOOGLE_SHEETS_ID__` – het ID van je spreadsheet (optioneel, standaardwaarde staat in de code).
    - `window.__CHAT_SPEL_GOOGLE_SHEETS_DEFAULTS_SHEET__`, `...MODULES_SHEET__`, `...QUESTIONS_SHEET__`, `...OPTIONS_SHEET__` – enkel nodig als je andere tabbladnamen gebruikt.
-   - `window.__CHAT_SPEL_SESSION_API_BASE_URL__` – URL van je Google Apps Script web-app voor het wegschrijven van sessies.
+   - `window.__CHAT_SPEL_SESSION_API_BASE_URL__` – URL van je Google Apps Script web-app voor het wegschrijven van sessies. Laat deze achterwege als je de sleutel `sessionApiBaseUrl` in je Google Sheet invult; de quiz en het dashboard lezen de waarde automatisch in.
 4. Voeg onderstaande HTML toe en pas de paden naar de bestanden aan.
 
 ```html
@@ -68,6 +68,9 @@ Maak in het spreadsheet minimaal de volgende tabbladen aan:
   - `description` – introductietekst op de startpagina.
   - `certificateMessage` – tekst op het certificaat.
   - `strings` – JSON-object met UI-strings, bijvoorbeeld `{ "startButton": "Start de quiz" }`.
+  - `sessionApiBaseUrl` – (optioneel) basis-URL van je Google Apps Script web-app. Wanneer ingevuld gebruiken quiz en dashboard automatisch Google Sheets als opslagbron en wordt IndexedDB niet meer gebruikt.
+  - `dashboardRefreshIntervalMs` – (optioneel) ververstijd van het dashboard in milliseconden.
+  - `dashboardAutoUpdate` – (optioneel) zet op `false` om automatische verversing van het dashboard uit te schakelen.
 - **modules** – kolommen `id`, `title`, `intro`, `tips` (JSON-array), `questionsPerSession` en `position`.
 - **questions** – kolommen `id`, `moduleId`, `text`, `type`, `feedbackCorrect`, `feedbackIncorrect` en `position`.
 - **options** – kolommen `id`, `questionId`, `label`, `isCorrect` (TRUE/FALSE) en `position`.
@@ -93,7 +96,7 @@ configuratie zodra je het hebt gedeployed als web-app.
 1. Maak een nieuw Apps Script-project aan en plak de code uit het hierboven genoemde bestand in de editor.
 2. Vul je Spreadsheet-ID in en deploy het project als web-app met toegang voor iedereen met de link.
 3. Configureer je website door vóór het initialiseren van de quiz `window.__CHAT_SPEL_SESSION_API_BASE_URL__` te zetten naar de
-   URL van de web-app (zie voorbeeld hierboven). Zowel de quiz als het dashboard sturen hun sessieaanroepen automatisch naar dit
-   adres.
+   URL van de web-app (zie voorbeeld hierboven). Je kunt deze stap overslaan als je `sessionApiBaseUrl` hebt ingevuld in het
+   Google Sheet. Zowel de quiz als het dashboard sturen hun sessieaanroepen automatisch naar dit adres.
 4. Controleer het Google Sheet: nieuwe sessies, heartbeats, pogingen en afrondingen verschijnen direct zodat je dashboards kunt
    opbouwen zonder de Node-server.

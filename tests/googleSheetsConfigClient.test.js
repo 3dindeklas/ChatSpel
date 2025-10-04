@@ -1,5 +1,6 @@
 const {
   loadQuizConfig,
+  loadSessionSettings,
   listQuestions,
   getQuestionDetail,
   clearCache
@@ -25,6 +26,21 @@ describe("googleSheetsConfigClient", () => {
     expect(config.modules[0].id).toBe("wachtwoorden");
     expect(config.modules[0].questionPool).toHaveLength(8);
     expect(config.modules[1].questionPool[0].options).toHaveLength(4);
+    expect(config.sessionApiBaseUrl).toBe(
+      "https://script.google.com/macros/s/demo-id/exec"
+    );
+    expect(config.dashboard.refreshIntervalMs).toBe(20000);
+    expect(config.dashboard.autoUpdate).toBe(false);
+  });
+
+  test("leest sessie-instellingen uit defaults", async () => {
+    const settings = await loadSessionSettings({ sheetsData });
+
+    expect(settings.sessionApiBaseUrl).toBe(
+      "https://script.google.com/macros/s/demo-id/exec"
+    );
+    expect(settings.dashboard.refreshIntervalMs).toBe(20000);
+    expect(settings.dashboard.autoUpdate).toBe(false);
   });
 
   test("geeft een vlakke lijst met vragen terug", async () => {
