@@ -167,14 +167,25 @@
     }
     const parsed = JSON.parse(match[1]);
     const table = parsed.table || {};
-    const cols = (table.cols || []).map((col, index) =>
-      toHeaderName(col.label || col.id || "", index)
+    const rawCols = table.cols || [];
+    const cols = rawCols.map((col, index) =>
+      toHeaderName(col && (col.label || col.id || ""), index)
     );
     return (table.rows || []).map((row) => {
       const values = row.c || [];
       const entry = {};
       cols.forEach((header, index) => {
-        entry[header] = normalizeCellValue(values[index]);
+        const value = normalizeCellValue(values[index]);
+        const colInfo = rawCols[index] || {};
+        const aliases = [
+          header,
+          typeof colInfo.id === "string" ? colInfo.id.trim() : "",
+          `column${index}`
+        ].filter(Boolean);
+
+        aliases.forEach((alias) => {
+          entry[alias] = value;
+        });
       });
       return entry;
     });
