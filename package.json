@@ -1,0 +1,18 @@
+{
+  "name": "chatspel",
+  "version": "1.0.0",
+  "description": "Digitale veiligheidsquiz met backend",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "nodemon server/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "sqlite3": "^5.1.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
