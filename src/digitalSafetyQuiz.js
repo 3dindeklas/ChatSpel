@@ -316,7 +316,8 @@
       this.storageEnabled = this.database.isSupported;
       this.cache = {};
       this.sessionIndex = {};
-      this.remoteEnabled = typeof fetch === "function";
+      this.remoteEnabled =
+        typeof fetch === "function" && Boolean(this.apiBaseUrl);
       this.remoteSnapshot = null;
       this._remotePollingTimer = null;
       this._heartbeatTimers = new Map();

@@ -1,80 +1,46 @@
 (function () {
   "use strict";
 
-  const PAGE_BASE = new URL("./", window.location.href);
+  function getSheetOptions() {
+    const sheetOptions = {};
+    const mappings = [
+      ["sheetId", "__CHAT_SPEL_GOOGLE_SHEETS_ID__"],
+      ["defaultsSheet", "__CHAT_SPEL_GOOGLE_SHEETS_DEFAULTS_SHEET__"],
+      ["modulesSheet", "__CHAT_SPEL_GOOGLE_SHEETS_MODULES_SHEET__"],
+      ["questionsSheet", "__CHAT_SPEL_GOOGLE_SHEETS_QUESTIONS_SHEET__"],
+      ["optionsSheet", "__CHAT_SPEL_GOOGLE_SHEETS_OPTIONS_SHEET__"]
+    ];
 
-  function stripTrailingPublic(pathname) {
-    if (!pathname) {
-      return "";
-    }
-
-    const segments = String(pathname)
-      .split("/")
-      .filter(Boolean);
-
-    if (segments.length && segments[segments.length - 1] === "public") {
-      segments.pop();
-    }
-
-    if (!segments.length) {
-      return "";
-    }
-
-    return `/${segments.join("/")}`;
-  }
-
-  function normalizeBasePath(path) {
-    if (!path || typeof path !== "string") {
-      return "";
-    }
-
-    const trimmed = path.trim();
-    if (!trimmed || trimmed === "/") {
-      return "";
-    }
-
-    const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(trimmed);
-
-    if (isAbsolute) {
-      try {
-        const parsed = new URL(trimmed, PAGE_BASE.origin);
-        const sanitizedPath = stripTrailingPublic(
-          parsed.pathname.replace(/\/+$/, "")
-        );
-        parsed.pathname = sanitizedPath || "/";
-        return parsed.toString().replace(/\/+$/, "");
-      } catch (error) {
-        return trimmed.replace(/\/+$/, "");
+    mappings.forEach(([optionKey, globalKey]) => {
+      const value = window[globalKey];
+      if (typeof value === "string" && value.trim()) {
+        sheetOptions[optionKey] = value.trim();
       }
+    });
+
+    if (
+      !sheetOptions.sheetId &&
+      window.DSQGoogleSheets &&
+      window.DSQGoogleSheets.DEFAULT_SHEET_ID
+    ) {
+      sheetOptions.sheetId = window.DSQGoogleSheets.DEFAULT_SHEET_ID;
     }
 
-    const normalized = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-    const sanitizedPath = stripTrailingPublic(normalized.replace(/\/+$/, ""));
+    return sheetOptions;
+  }
 
-    if (!sanitizedPath || sanitizedPath === "/") {
+  function getSpreadsheetUrl() {
+    const sheetId =
+      (typeof window.__CHAT_SPEL_GOOGLE_SHEETS_ID__ === "string" &&
+        window.__CHAT_SPEL_GOOGLE_SHEETS_ID__.trim()) ||
+      (window.DSQGoogleSheets && window.DSQGoogleSheets.DEFAULT_SHEET_ID) ||
+      "";
+
+    if (!sheetId) {
       return "";
     }
 
-    return sanitizedPath;
-  }
-
-  function getApiBasePath() {
-    if (typeof window.__CHAT_SPEL_API_BASE_PATH__ === "string") {
-      return normalizeBasePath(window.__CHAT_SPEL_API_BASE_PATH__);
-    }
-    return normalizeBasePath(PAGE_BASE.pathname);
-  }
-
-  function getApiBaseUrl() {
-    const basePath = getApiBasePath();
-    const normalized = basePath ? `${basePath}/` : "";
-    return new URL(normalized, PAGE_BASE.origin);
-  }
-
-  function buildApiUrl(path) {
-    const base = getApiBaseUrl();
-    const normalized = (path || "").toString().replace(/^\/+/, "");
-    return new URL(normalized, base).toString();
+    return `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
   }
 
   function createElement(tag, options = {}) {
@@ -90,7 +56,9 @@
     }
     if (options.attrs) {
       Object.entries(options.attrs).forEach(([key, value]) => {
-        element.setAttribute(key, value);
+        if (value !== undefined) {
+          element.setAttribute(key, value);
+        }
       });
     }
     return element;
@@ -104,18 +72,27 @@
   }
 
   async function fetchQuestions() {
-    const response = await fetch(buildApiUrl("api/questions"));
-    if (!response.ok) {
-      throw new Error("Kon vragen niet laden");
+    if (
+      !window.DSQGoogleSheets ||
+      typeof window.DSQGoogleSheets.listQuestions !== "function"
+    ) {
+      throw new Error(
+        "Google Sheets loader is niet beschikbaar. Controleer of googleSheetsConfigClient.js geladen is."
+      );
     }
-    return response.json();
+    return window.DSQGoogleSheets.listQuestions(getSheetOptions());
   }
 
   function showFeedback(container, message, variant = "error") {
     container.innerHTML = "";
     const box = createElement("div", {
-      className: variant === "error" ? "admin-error" : "admin-success",
-      text: message
+      className:
+        variant === "success"
+          ? "admin-success"
+          : variant === "info"
+          ? "admin-info"
+          : "admin-error",
+      html: message
     });
     container.append(box);
   }
@@ -151,15 +128,9 @@
         html: `<span class="admin-tag">${formatType(question.type)}</span>`
       });
 
-      const actionCell = createElement("td");
-      const editLink = createElement("a", {
-        className: "admin-button admin-secondary",
-        text: "Bewerken",
-        attrs: {
-          href: `question-editor.html?id=${encodeURIComponent(question.id)}`
-        }
+      const actionCell = createElement("td", {
+        html: "<span class=\"admin-hint\">Aanpassen doe je in Google Sheets</span>"
       });
-      actionCell.append(editLink);
 
       row.append(questionCell, moduleCell, typeCell, actionCell);
       tbody.append(row);
@@ -170,10 +141,21 @@
     const table = document.getElementById("questions-table");
     const emptyState = document.getElementById("questions-empty");
     const feedback = document.getElementById("questions-feedback");
+    const hint = document.getElementById("questions-hint");
 
-    // Zorg dat de API-basis ook beschikbaar is voor andere scripts indien nodig.
-    if (!window.__CHAT_SPEL_API_BASE_PATH__) {
-      window.__CHAT_SPEL_API_BASE_PATH__ = getApiBasePath();
+    const spreadsheetUrl = getSpreadsheetUrl();
+    if (hint && spreadsheetUrl) {
+      const link = createElement("a", {
+        text: "open het Google Sheet",
+        attrs: { href: spreadsheetUrl, target: "_blank", rel: "noopener" }
+      });
+      hint.innerHTML = "Beheer de vragen rechtstreeks in Google Sheets (";
+      hint.append(link);
+      hint.append(
+        document.createTextNode(
+          "). Wijzigingen verschijnen automatisch in het overzicht."
+        )
+      );
     }
 
     fetchQuestions()
@@ -184,7 +166,9 @@
       .catch((error) => {
         showFeedback(
           feedback,
-          error.message || "Er ging iets mis bij het laden van de vragen."
+          error.message ||
+            "Er ging iets mis bij het laden van de vragen. Controleer de Google Sheet configuratie.",
+          "error"
         );
         table.hidden = true;
         emptyState.hidden = false;
