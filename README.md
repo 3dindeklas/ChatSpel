@@ -15,9 +15,14 @@ Installeer eerst de afhankelijkheden en start daarna de Node-server. De server l
 ```bash
 npm install
 npm start
+npm test
 ```
 
 Open vervolgens [http://localhost:3000/](http://localhost:3000/) in je browser om de quiz te bekijken. Het live dashboard is bereikbaar via `public/dashboard.html` en het beheer van vragen via `public/questions.html`.
+
+### Automatische dashboardverversing
+
+Het dashboard wordt standaard elke 15 seconden ververst. Pas dit aan door `refreshIntervalMs` mee te geven aan `createDigitalSafetyDashboard` (waarde in milliseconden).
 
 ### Vragen beheren
 

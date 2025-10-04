@@ -8,14 +8,14 @@
     return container || null;
   }
 
-  function createStore(providedStore) {
+  function createStore(providedStore, storeOptions = {}) {
     if (providedStore) {
       return providedStore;
     }
 
     const dashboardAPI = global.DSQDashboard || {};
     if (dashboardAPI.DailySessionStore) {
-      return new dashboardAPI.DailySessionStore();
+      return new dashboardAPI.DailySessionStore(storeOptions);
     }
 
     throw new Error(
@@ -23,7 +23,7 @@
     );
   }
 
-  function createView(container, store) {
+  function createView(container, store, viewOptions = {}) {
     const dashboardAPI = global.DSQDashboard || {};
     if (!dashboardAPI.DashboardView) {
       throw new Error(
@@ -31,7 +31,7 @@
       );
     }
 
-    return new dashboardAPI.DashboardView(container, store);
+    return new dashboardAPI.DashboardView(container, store, viewOptions);
   }
 
   function createDigitalSafetyDashboard(options = {}) {
@@ -42,8 +42,28 @@
       );
     }
 
-    const store = createStore(options.store);
-    return createView(container, store);
+    const storeOptions = {
+      ...(options.storeOptions || {})
+    };
+
+    if (options.apiBaseUrl && !storeOptions.apiBaseUrl) {
+      storeOptions.apiBaseUrl = options.apiBaseUrl;
+    }
+
+    if (
+      typeof options.heartbeatIntervalMs === "number" &&
+      storeOptions.heartbeatIntervalMs === undefined
+    ) {
+      storeOptions.heartbeatIntervalMs = options.heartbeatIntervalMs;
+    }
+
+    const store = createStore(options.store, storeOptions);
+    const viewOptions = {
+      refreshIntervalMs: options.refreshIntervalMs,
+      autoUpdate: options.autoUpdate
+    };
+
+    return createView(container, store, viewOptions);
   }
 
   global.createDigitalSafetyDashboard = createDigitalSafetyDashboard;

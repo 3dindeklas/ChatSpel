@@ -227,6 +227,7 @@
   }
 
   const SESSION_EVENT_NAME = "dsq:sessions-updated";
+  const DASHBOARD_DEFAULT_REFRESH_INTERVAL = 15000;
 
   class DailySessionStore {
     constructor(options = {}) {
@@ -303,7 +304,8 @@
         const url = this._buildUrl(path);
         const fetchOptions = {
           method: options.method || "GET",
-          credentials: "same-origin"
+          credentials: "same-origin",
+          cache: options.cache || "no-store"
         };
 
         const headers = { ...(options.headers || {}) };
@@ -735,16 +737,24 @@
   }
 
   class DashboardView {
-    constructor(container, store) {
+    constructor(container, store, options = {}) {
       this.container = container;
       this.store = store;
       this.elements = {};
+      this.options = options || {};
+      this.autoUpdate = options.autoUpdate !== false;
+      this.refreshIntervalMs = this._resolveRefreshInterval(
+        options.refreshIntervalMs
+      );
+      this.autoUpdateTimer = null;
+      this.handleUpdate = this.update.bind(this);
+
       this.render();
       this.update();
 
-      this.handleUpdate = this.update.bind(this);
       if (typeof window !== "undefined") {
         window.addEventListener(SESSION_EVENT_NAME, this.handleUpdate);
+        this._scheduleAutoUpdate();
       }
     }
 
@@ -829,6 +839,38 @@
       this._renderSessions(snapshot.activeSessions);
     }
 
+    _resolveRefreshInterval(value) {
+      if (value === undefined || value === null) {
+        return DASHBOARD_DEFAULT_REFRESH_INTERVAL;
+      }
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        return 0;
+      }
+      return parsed;
+    }
+
+    _scheduleAutoUpdate() {
+      if (!this.autoUpdate || typeof window === "undefined") {
+        return;
+      }
+      if (this.refreshIntervalMs <= 0) {
+        return;
+      }
+      this._clearAutoUpdate();
+      this.autoUpdateTimer = window.setInterval(
+        this.handleUpdate,
+        this.refreshIntervalMs
+      );
+    }
+
+    _clearAutoUpdate() {
+      if (this.autoUpdateTimer && typeof window !== "undefined") {
+        window.clearInterval(this.autoUpdateTimer);
+      }
+      this.autoUpdateTimer = null;
+    }
+
     _renderSessions(sessions = []) {
       const list = this.elements.sessionList;
       list.innerHTML = "";
@@ -889,6 +931,7 @@
     }
 
     destroy() {
+      this._clearAutoUpdate();
       if (typeof window !== "undefined") {
         window.removeEventListener(SESSION_EVENT_NAME, this.handleUpdate);
       }
