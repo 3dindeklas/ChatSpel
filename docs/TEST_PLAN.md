@@ -13,12 +13,11 @@ Dit testplan beschrijft hoe we de stabiliteit van de Digitale Veiligheidsquiz wa
 ### 2.1 API-integratietests (nu geïmplementeerd)
 - **Framework**: Jest + Supertest.
 - **Dekking**:
-  - Lezen van configuratie (`GET /api/quiz-config`, `GET /api/modules`).
-  - Beheer van vragen (`POST /api/questions`, `PUT /api/questions/:id`).
-  - Dashboardstatistieken (`GET /api/dashboard`).
+  - Lezen van configuratie vanuit Google Sheets (`GET /api/quiz-config`, `GET /api/modules`, `GET /api/questions`).
+  - Afhandelen van niet-ondersteunde mutaties (`POST /api/questions` retourneert een duidelijke melding).
 - **Aanpak**:
-  - Gebruik een in-memory SQLite-database per testsuite.
-  - Herseed de database voor elke test om deterministische resultaten te krijgen.
+  - Gebruik `process.env.GOOGLE_SHEETS_FAKE_DATA_DIR` om naar lokale JSON-fixtures te verwijzen in plaats van live spreadsheets.
+  - Houd de fixtures klein en representatief zodat tests deterministisch blijven.
 
 ### 2.2 Front-end componenttests (nu geïmplementeerd)
 - **Framework**: Jest (jsdom-omgeving).
@@ -34,16 +33,16 @@ Dit testplan beschrijft hoe we de stabiliteit van de Digitale Veiligheidsquiz wa
 - **Status**: Nog te implementeren zodra er een stabiele CI is en de belangrijkste user journeys zijn vastgelegd.
 
 ## 3. Testdata en fixtures
-- Gebruik `data/quizData.json` als bron voor seed-data.
+- Gebruik de JSON-bestanden in `data/google-sheets/` als bron voor testdata.
 - Voor nieuwe testcases kunnen aanvullende fixture-bestanden in `tests/fixtures/` worden toegevoegd.
 
 ## 4. Richtlijnen voor toekomstige tests
-- Houd tests onafhankelijk en idempotent; reset de database tussen tests.
+- Houd tests onafhankelijk en idempotent; wijzig de fixturebestanden alleen bewust en documenteer die wijzigingen.
 - Gebruik duidelijke beschrijvingen (`it("should ...")`) zodat falende tests direct inzicht geven in het probleem.
 - Documenteer bugfixes met regressietests om herhaling te voorkomen.
 
 ## 5. Uitvoering
-- **Lokale ontwikkeling**: `npm test` draait alle Jest-tests sequentieel (`--runInBand`) zodat de gedeelde SQLite-verbinding geen race conditions veroorzaakt.
+- **Lokale ontwikkeling**: `npm test` draait alle Jest-tests sequentieel (`--runInBand`) zodat gedeelde fixtures niet door elkaar gaan lopen.
 - **CI**: Voeg de teststap toe aan de bestaande pipeline zodra die is ingericht.
 
 Met dit plan borgen we dat belangrijke backend-processen, zoals sessieregistratie en dashboardrapportage, getest worden en dat de front-end de data correct blijft weergeven. Verdere uitbreidingen (zoals e2e-tests) kunnen hier gemakkelijk op aansluiten.
