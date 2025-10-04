@@ -355,6 +355,22 @@
     }, {});
   }
 
+  function setDebugDefaults(dataset, defaults, strings) {
+    if (!dataset || typeof global !== "object" || !global) {
+      return;
+    }
+    try {
+      const snapshot = {
+        raw: deepClone(dataset.defaults),
+        normalized: deepClone(defaults),
+        strings: deepClone(strings)
+      };
+      global.__CHAT_SPEL_DEFAULTS_CONFIG__ = snapshot;
+    } catch (error) {
+      // stille debug: als deepClone faalt willen we geen fout gooien
+    }
+  }
+
   function buildQuizConfigFromDataset(dataset) {
     const defaults = normalizeDefaults(dataset.defaults);
     const modules = (dataset.modules || []).map(buildModule);
@@ -367,11 +383,14 @@
       questionsWithOptions
     );
 
+    const strings = normalizeStrings(defaults.strings);
+    setDebugDefaults(dataset, defaults, strings);
+
     return {
       title: defaults.title || "",
       description: defaults.description || "",
       certificateMessage: defaults.certificateMessage || "",
-      strings: normalizeStrings(defaults.strings),
+      strings,
       modules: modulesWithQuestions,
       sessionApiBaseUrl: resolveSessionApiBaseUrl(defaults),
       dashboard: resolveDashboardSettings(defaults)
@@ -380,6 +399,8 @@
 
   function buildSessionSettings(dataset) {
     const defaults = normalizeDefaults(dataset.defaults);
+    const strings = normalizeStrings(defaults.strings);
+    setDebugDefaults(dataset, defaults, strings);
     return {
       sessionApiBaseUrl: resolveSessionApiBaseUrl(defaults),
       dashboard: resolveDashboardSettings(defaults)

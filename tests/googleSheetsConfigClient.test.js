@@ -31,6 +31,17 @@ describe("googleSheetsConfigClient", () => {
     );
     expect(config.dashboard.refreshIntervalMs).toBe(20000);
     expect(config.dashboard.autoUpdate).toBe(false);
+    expect(config.strings.startButton).toBe("Start de quiz");
+    expect(config.strings.checkAnswer).toBe("Controleer antwoord");
+
+    expect(global.__CHAT_SPEL_DEFAULTS_CONFIG__).toMatchObject({
+      normalized: expect.objectContaining({
+        title: "Digitaal Veiligheidsrijbewijs"
+      }),
+      strings: expect.objectContaining({
+        startButton: "Start de quiz"
+      })
+    });
   });
 
   test("leest sessie-instellingen uit defaults", async () => {
