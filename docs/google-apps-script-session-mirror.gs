@@ -68,6 +68,11 @@ function doPost(e) {
   return handleRequest("POST", e);
 }
 
+/** Entry point for OPTIONS (CORS preflight) requests */
+function doOptions(e) {
+  return jsonResponse({}, 200, e);
+}
+
 function handleRequest(method, e) {
   try {
     ensureSheets();
@@ -75,17 +80,17 @@ function handleRequest(method, e) {
     const segments = path ? path.split("/").filter(Boolean) : [];
 
     if (method === "GET") {
-      return handleGet(segments);
+      return handleGet(segments, e);
     }
 
     if (method === "POST") {
       return handlePost(segments, e);
     }
 
-    return jsonResponse({ error: "Method not supported" });
+    return jsonResponse({ error: "Method not supported" }, 405, e);
   } catch (error) {
     console.error(error);
-    return jsonResponse({ error: error.message || "Unexpected error" });
+    return jsonResponse({ error: error.message || "Unexpected error" }, 500, e);
   }
 }
 
@@ -110,14 +115,89 @@ function parsePayload(e) {
   }
 }
 
-function jsonResponse(body) {
-  const output = ContentService.createTextOutput(
-    JSON.stringify(body || {})
-  );
-  output.setMimeType(ContentService.MimeType.JSON);
-  output.setHeader("Access-Control-Allow-Origin", "*");
-  output.setHeader("Cache-Control", "no-store");
-  return output;
+const DEFAULT_CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Max-Age": "3600",
+  Vary: "Origin",
+  "Content-Type": "application/json"
+};
+
+function jsonResponse(body, statusCode, e) {
+  const payload = JSON.stringify(body || {});
+  const headers = buildCorsHeaders(e);
+  const textOutput = ContentService.createTextOutput(payload).setMimeType(ContentService.MimeType.JSON);
+
+  if (applyHeaders(textOutput, headers, statusCode)) {
+    return textOutput;
+  }
+
+  const fallback = buildHtmlFallback(payload, headers, statusCode);
+  return fallback || textOutput;
+}
+
+function buildCorsHeaders(e) {
+  const headers = Object.assign({}, DEFAULT_CORS_HEADERS);
+  const origin = extractOrigin(e);
+  if (origin) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+  return headers;
+}
+
+function extractOrigin(e) {
+  if (!e) {
+    return "";
+  }
+  if (e.headers && e.headers.origin) {
+    return String(e.headers.origin);
+  }
+  if (e.parameter) {
+    const paramOrigin = e.parameter.origin || e.parameter.Origin || e.parameter.ORIGIN;
+    if (paramOrigin) {
+      return String(paramOrigin);
+    }
+  }
+  return "";
+}
+
+function applyHeaders(response, headers, statusCode) {
+  if (!response || typeof response.setHeader !== "function") {
+    return false;
+  }
+
+  Object.keys(headers).forEach(function (key) {
+    response.setHeader(key, headers[key]);
+  });
+
+  if (statusCode && typeof response.setStatusCode === "function") {
+    response.setStatusCode(statusCode);
+  }
+
+  return true;
+}
+
+function buildHtmlFallback(payload, headers, statusCode) {
+  if (typeof HtmlService === "undefined") {
+    return null;
+  }
+
+  const htmlOutput = HtmlService.createHtmlOutput(payload);
+  if (typeof htmlOutput.getResponse !== "function") {
+    return null;
+  }
+
+  const response = htmlOutput.getResponse();
+  if (typeof response.setContent === "function") {
+    response.setContent(payload);
+  }
+  if (typeof response.setMimeType === "function") {
+    response.setMimeType(ContentService.MimeType.JSON);
+  }
+
+  applyHeaders(response, headers, statusCode);
+  return response;
 }
 
 function getSpreadsheet() {
@@ -158,17 +238,17 @@ function ensureSheets() {
   });
 }
 
-function handleGet(segments) {
+function handleGet(segments, e) {
   if (segments.length === 2 && segments[0] === "api" && segments[1] === "dashboard") {
-    return jsonResponse(buildDashboardSnapshot());
+    return jsonResponse(buildDashboardSnapshot(), 200, e);
   }
-  return jsonResponse({ error: "Not found" });
+  return jsonResponse({ error: "Not found" }, 404, e);
 }
 
 function handlePost(segments, e) {
   if (segments.length >= 2 && segments[0] === "api" && segments[1] === "sessions") {
     if (segments.length === 2) {
-      return jsonResponse(createSession(parsePayload(e)));
+      return jsonResponse(createSession(parsePayload(e)), 200, e);
     }
 
     const sessionId = segments[2];
@@ -176,20 +256,20 @@ function handlePost(segments, e) {
     const payload = parsePayload(e);
 
     if (action === "heartbeat") {
-      return jsonResponse(recordHeartbeat(sessionId));
+      return jsonResponse(recordHeartbeat(sessionId), 200, e);
     }
     if (action === "attempt") {
-      return jsonResponse(recordAttempt(sessionId, payload));
+      return jsonResponse(recordAttempt(sessionId, payload), 200, e);
     }
     if (action === "complete") {
-      return jsonResponse(completeSession(sessionId, payload));
+      return jsonResponse(completeSession(sessionId, payload), 200, e);
     }
     if (action === "leave") {
-      return jsonResponse(markSessionLeft(sessionId));
+      return jsonResponse(markSessionLeft(sessionId), 200, e);
     }
   }
 
-  return jsonResponse({ error: "Not found" });
+  return jsonResponse({ error: "Not found" }, 404, e);
 }
 
 function createSession(payload) {
