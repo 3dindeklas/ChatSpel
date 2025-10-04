@@ -124,6 +124,7 @@
       nextModule: "Volgende module",
       continue: "Ga verder",
       checkAnswer: "Controleer antwoord",
+      nextQuestion: "Volgende vraag",
       selectOptions: "Selecteer je antwoord", 
       selectMultiple: "Selecteer een of meer antwoorden",
       feedbackCorrect: "Goed gedaan!",
@@ -352,12 +353,24 @@
         form.append(wrapper);
       });
 
-      const feedbackEl = createElement("div", { className: "dsq-feedback" });
+      const feedbackEl = createElement("div", {
+        className: "dsq-feedback",
+        attrs: { "aria-live": "polite", role: "status" }
+      });
       const button = createElement("button", {
         className: "dsq-button",
         text: this.config.strings.checkAnswer,
         attrs: { type: "submit" }
       });
+
+      const nextQuestionButton = createElement("button", {
+        className: "dsq-button dsq-button-secondary",
+        text: this.config.strings.nextQuestion,
+        attrs: { type: "button" }
+      });
+      nextQuestionButton.disabled = true;
+
+      let hasRecordedScore = false;
 
       form.addEventListener("submit", (event) => {
         event.preventDefault();
@@ -365,17 +378,32 @@
           form.querySelectorAll("input:checked")
         ).map((input) => input.value);
 
+        if (!answers.length) {
+          feedbackEl.textContent =
+            question.type === "multiple"
+              ? this.config.strings.selectMultiple
+              : this.config.strings.selectOptions;
+          feedbackEl.classList.remove("dsq-feedback-correct");
+          feedbackEl.classList.add("dsq-feedback-incorrect");
+          return;
+        }
+
         const isCorrect = this.evaluateAnswer(question, answers);
         if (isCorrect) {
-          this.score += 1;
+          if (!hasRecordedScore) {
+            this.score += 1;
+            hasRecordedScore = true;
+          }
           feedbackEl.textContent = question.feedback?.correct || this.config.strings.feedbackCorrect;
           feedbackEl.classList.remove("dsq-feedback-incorrect");
           feedbackEl.classList.add("dsq-feedback-correct");
 
-          setTimeout(() => {
-            this.currentQuestionIndex += 1;
-            this.renderQuestion();
-          }, 1000);
+          button.disabled = true;
+          form.querySelectorAll("input").forEach((input) => {
+            input.disabled = true;
+          });
+          nextQuestionButton.disabled = false;
+          nextQuestionButton.focus();
         } else {
           feedbackEl.textContent = question.feedback?.incorrect || this.config.strings.feedbackIncorrect;
           feedbackEl.classList.remove("dsq-feedback-correct");
@@ -386,6 +414,14 @@
       questionCard.append(form, feedbackEl);
       this.mainEl.append(questionCard);
       this.footerEl.innerHTML = "";
+      nextQuestionButton.addEventListener("click", () => {
+        if (nextQuestionButton.disabled) {
+          return;
+        }
+        this.currentQuestionIndex += 1;
+        this.renderQuestion();
+      });
+      this.footerEl.append(nextQuestionButton);
 
       this.updateProgress();
     }
