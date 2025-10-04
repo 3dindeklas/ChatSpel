@@ -102,6 +102,25 @@
           window.__CHAT_SPEL_SESSION_API_BASE_URL__ || config.sessionApiBaseUrl
         );
 
+        if (config.title && typeof document !== "undefined") {
+          document.title = String(config.title);
+        }
+
+        if (
+          config.description &&
+          typeof document !== "undefined" &&
+          document.head
+        ) {
+          const head = document.head;
+          let meta = head.querySelector("meta[name='description']");
+          if (!meta) {
+            meta = document.createElement("meta");
+            meta.setAttribute("name", "description");
+            head.appendChild(meta);
+          }
+          meta.setAttribute("content", String(config.description));
+        }
+
         if (
           !window.__CHAT_SPEL_SESSION_API_BASE_URL__ &&
           resolvedSessionApiBaseUrl

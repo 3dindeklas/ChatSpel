@@ -50,6 +50,57 @@ function parseJsonValue(value) {
   return trimmed;
 }
 
+function parseUrl(value) {
+  if (value === null || typeof value === "undefined") {
+    return "";
+  }
+
+  if (typeof value === "string") {
+    return value.trim();
+  }
+
+  return String(value).trim();
+}
+
+function resolveSessionApiBaseUrl(defaults = {}) {
+  const candidate =
+    defaults.sessionApiBaseUrl ||
+    defaults.sessionApiBaseURL ||
+    defaults.sessionApiUrl ||
+    defaults.sessionApi ||
+    defaults.sessionApiEndpoint ||
+    "";
+
+  return parseUrl(candidate);
+}
+
+function resolveDashboardSettings(defaults = {}) {
+  const settings = {};
+
+  const autoUpdateValue =
+    defaults.dashboardAutoUpdate ?? defaults.dashboardAutoRefresh;
+  if (autoUpdateValue !== undefined) {
+    settings.autoUpdate = parseBoolean(autoUpdateValue);
+  }
+
+  const refreshSource =
+    defaults.dashboardRefreshIntervalMs ??
+    defaults.dashboardRefreshMs ??
+    defaults.dashboardRefreshInterval ??
+    (defaults.dashboardRefreshSeconds
+      ? Number(defaults.dashboardRefreshSeconds) * 1000
+      : undefined);
+
+  if (refreshSource !== undefined) {
+    const parsed = parseNumber(refreshSource, 0);
+    if (parsed > 0) {
+      settings.refreshIntervalMs = parsed;
+    }
+  }
+
+  return settings;
+}
+
 async function loadDefaults() {
   const rows = await fetchSheet("defaults");
   return rows.reduce((acc, row) => {
@@ -220,7 +271,9 @@ async function getQuizConfig() {
     description: defaults.description || "",
     certificateMessage: defaults.certificateMessage || "",
     strings,
-    modules: modulesWithQuestions
+    modules: modulesWithQuestions,
+    sessionApiBaseUrl: resolveSessionApiBaseUrl(defaults),
+    dashboard: resolveDashboardSettings(defaults)
   };
 }
 
