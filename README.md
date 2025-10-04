@@ -72,7 +72,7 @@ Maak in het spreadsheet minimaal de volgende tabbladen aan:
 - **questions** – kolommen `id`, `moduleId`, `text`, `type`, `feedbackCorrect`, `feedbackIncorrect` en `position`.
 - **options** – kolommen `id`, `questionId`, `label`, `isCorrect` (TRUE/FALSE) en `position`.
 
-Pas je iets aan in het spreadsheet, dan is de wijziging direct zichtbaar in de quiz zonder dat je code hoeft te deployen.
+Pas je iets aan in het spreadsheet, dan is de wijziging direct zichtbaar in de quiz zonder dat je code hoeft te deployen. Als de configuratie niet kan worden geladen, verschijnt er een foutmelding op de pagina en in de browserconsole; er is geen automatische terugval meer naar de meegeleverde JSON-bestanden. Hierdoor blijft Google Sheets de enige bron van waarheid.
 
 Let op: voor de downloadknop van het certificaat heb je de bibliotheek [`html2canvas`](https://html2canvas.hertzen.com/) nodig. Voeg deze toe vóór `digitalSafetyQuiz.js` als je de downloadfunctie wilt gebruiken.
 
