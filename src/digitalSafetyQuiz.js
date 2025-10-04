@@ -198,6 +198,63 @@
     return `${basePrefix}${Date.now().toString(36)}-${randomPart}`;
   }
 
+  function stripTrailingPublicSegment(pathname) {
+    if (!pathname) {
+      return "";
+    }
+
+    const segments = String(pathname)
+      .split("/")
+      .filter(Boolean);
+
+    if (segments.length && segments[segments.length - 1] === "public") {
+      segments.pop();
+    }
+
+    if (!segments.length) {
+      return "";
+    }
+
+    return `/${segments.join("/")}`;
+  }
+
+  function sanitizeApiBaseUrl(value) {
+    if (!value || typeof value !== "string") {
+      return "";
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return "";
+    }
+
+    const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(trimmed);
+
+    if (isAbsolute) {
+      try {
+        const parsed = new URL(trimmed);
+        const sanitizedPath = stripTrailingPublicSegment(
+          parsed.pathname.replace(/\/+$/, "")
+        );
+        parsed.pathname = sanitizedPath || "/";
+        return parsed.toString().replace(/\/+$/, "");
+      } catch (error) {
+        return trimmed.replace(/\/+$/, "");
+      }
+    }
+
+    const normalized = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+    const sanitizedPath = stripTrailingPublicSegment(
+      normalized.replace(/\/+$/, "")
+    );
+
+    if (!sanitizedPath || sanitizedPath === "/") {
+      return "";
+    }
+
+    return sanitizedPath;
+  }
+
   function shuffleArray(input = []) {
     const array = Array.isArray(input) ? [...input] : [];
     for (let i = array.length - 1; i > 0; i -= 1) {
@@ -232,7 +289,7 @@
   class DailySessionStore {
     constructor(options = {}) {
       this.prefix = options.prefix || "digitalSafetyQuiz:sessions";
-      this.apiBaseUrl = options.apiBaseUrl || "";
+      this.apiBaseUrl = sanitizeApiBaseUrl(options.apiBaseUrl || "");
       this.heartbeatIntervalMs = options.heartbeatIntervalMs || 15000;
       this.database = new IndexedDbAdapter();
       this.storageEnabled = this.database.isSupported;
@@ -992,7 +1049,7 @@
 
   class DigitalSafetyQuiz {
     constructor(options = {}) {
-      this.apiBaseUrl = options.apiBaseUrl || "";
+      this.apiBaseUrl = sanitizeApiBaseUrl(options.apiBaseUrl || "");
       this.config = normalizeConfig(options.config);
       this.container =
         typeof options.container === "string"

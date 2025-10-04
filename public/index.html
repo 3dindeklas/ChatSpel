@@ -21,17 +21,98 @@
           container.textContent = "Quiz wordt geladen...";
         }
 
-        const baseUrl = new URL("./", window.location.href);
-        const apiBasePath = baseUrl.pathname.replace(/\/$/, "");
+        const pageBaseUrl = new URL("./", window.location.href);
+
+        const stripTrailingPublic = (pathname) => {
+          if (!pathname) {
+            return "";
+          }
+
+          const segments = String(pathname)
+            .split("/")
+            .filter(Boolean);
+
+          if (segments.length && segments[segments.length - 1] === "public") {
+            segments.pop();
+          }
+
+          if (!segments.length) {
+            return "";
+          }
+
+          return `/${segments.join("/")}`;
+        };
+
+        const normalizeBasePath = (value) => {
+          if (!value || typeof value !== "string") {
+            return "";
+          }
+
+          const trimmed = value.trim();
+          if (!trimmed || trimmed === "/") {
+            return "";
+          }
+
+          const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(trimmed);
+
+          if (isAbsolute) {
+            try {
+              const parsed = new URL(trimmed, pageBaseUrl.origin);
+              const sanitizedPath = stripTrailingPublic(
+                parsed.pathname.replace(/\/+$/, "")
+              );
+              parsed.pathname = sanitizedPath || "/";
+              return parsed.toString().replace(/\/+$/, "");
+            } catch (error) {
+              return trimmed.replace(/\/+$/, "");
+            }
+          }
+
+          const normalized = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+          const sanitizedPath = stripTrailingPublic(
+            normalized.replace(/\/+$/, "")
+          );
+
+          if (!sanitizedPath || sanitizedPath === "/") {
+            return "";
+          }
+
+          return sanitizedPath;
+        };
+
+        const apiBasePath = normalizeBasePath(
+          typeof window.__CHAT_SPEL_API_BASE_PATH__ === "string"
+            ? window.__CHAT_SPEL_API_BASE_PATH__
+            : pageBaseUrl.pathname
+        );
+
         if (!window.__CHAT_SPEL_API_BASE_PATH__) {
           window.__CHAT_SPEL_API_BASE_PATH__ = apiBasePath;
         }
+
+        const apiBaseValue = window.__CHAT_SPEL_API_BASE_PATH__;
+        const apiBaseUrl = (() => {
+          if (typeof apiBaseValue === "string" && apiBaseValue) {
+            if (/^(?:[a-z]+:)?\/\//i.test(apiBaseValue)) {
+              return apiBaseValue.replace(/\/+$/, "");
+            }
+            const normalized = apiBaseValue.replace(/^\//, "");
+            return new URL(
+              normalized ? `${normalized}/` : "./",
+              pageBaseUrl.origin
+            )
+              .toString()
+              .replace(/\/+$/, "");
+          }
+          return pageBaseUrl.origin.replace(/\/+$/, "");
+        })();
+
         const buildApiUrl = (path) => {
           const normalized = path.startsWith("/") ? path.slice(1) : path;
-          return new URL(normalized, baseUrl).toString();
+          return new URL(normalized, `${apiBaseUrl}/`).toString();
         };
 
-        const buildDataUrl = (path) => new URL(path, baseUrl).toString();
+        const buildDataUrl = (path) => new URL(path, pageBaseUrl).toString();
 
         const uniqueUrls = (urls) => {
           const seen = new Set();
