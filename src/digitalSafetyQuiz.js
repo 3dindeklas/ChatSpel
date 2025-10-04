@@ -16,15 +16,17 @@
           "Gebruik een wachtwoordmanager of een wachtwoordzin",
           "Deel je wachtwoord nooit met anderen"
         ],
-        questions: [
+        questionsPerSession: 5,
+        questionPool: [
           {
-            id: "pw-1",
+            id: "pw-sterkste-wachtwoord",
             text: "Welk wachtwoord is het veiligst?",
             type: "single",
             options: [
               { id: "a", label: "123456" },
               { id: "b", label: "voetbal" },
-              { id: "c", label: "H0nd!sPr!ngt" }
+              { id: "c", label: "H0nd!sPr!ngt" },
+              { id: "d", label: "qwerty" }
             ],
             correct: ["c"],
             feedback: {
@@ -33,18 +35,134 @@
             }
           },
           {
-            id: "pw-2",
+            id: "pw-onthouden",
             text: "Wat is een goede manier om een wachtwoord te onthouden?",
             type: "single",
             options: [
-              { id: "a", label: "Schrijf het wachtwoord op een briefje en plak het op je scherm." },
-              { id: "b", label: "Gebruik een grappige zin en maak daar een wachtwoord van." },
-              { id: "c", label: "Gebruik hetzelfde wachtwoord voor alles." }
+              {
+                id: "a",
+                label: "Schrijf het wachtwoord op een briefje en plak het op je scherm."
+              },
+              {
+                id: "b",
+                label: "Gebruik een grappige zin en maak daar een wachtwoord van."
+              },
+              { id: "c", label: "Gebruik hetzelfde wachtwoord voor alles." },
+              { id: "d", label: "Deel het met je beste vriend zodat je het niet vergeet." }
             ],
             correct: ["b"],
             feedback: {
               correct: "Heel goed! Een wachtwoordzin is makkelijk te onthouden en moeilijk te raden.",
-              incorrect: "Probeer een wachtwoordzin te gebruiken. Dat is veiliger dan overal hetzelfde wachtwoord."}
+              incorrect: "Probeer een wachtwoordzin te gebruiken. Dat is veiliger dan overal hetzelfde wachtwoord."
+            }
+          },
+          {
+            id: "pw-manager",
+            text: "Waarom is een wachtwoordmanager handig?",
+            type: "single",
+            options: [
+              {
+                id: "a",
+                label: "Hij maakt automatisch unieke wachtwoorden voor al je accounts."
+              },
+              { id: "b", label: "Hij deelt je wachtwoorden met je vrienden." },
+              { id: "c", label: "Hij verandert je wachtwoorden elke dag zonder te vragen." },
+              { id: "d", label: "Hij onthoudt alleen simpele wachtwoorden." }
+            ],
+            correct: ["a"],
+            feedback: {
+              correct: "Precies! Een wachtwoordmanager maakt unieke wachtwoorden en bewaart ze veilig.",
+              incorrect: "Een wachtwoordmanager helpt je om sterke, unieke wachtwoorden te maken en te bewaren."
+            }
+          },
+          {
+            id: "pw-elk-account",
+            text: "Waarom moet je voor elk account een ander wachtwoord gebruiken?",
+            type: "single",
+            options: [
+              {
+                id: "a",
+                label: "Omdat het anders te veel tijd kost om in te loggen."
+              },
+              {
+                id: "b",
+                label: "Omdat als één wachtwoord wordt gestolen, de andere accounts dan veilig blijven."
+              },
+              { id: "c", label: "Omdat websites dat verplichten." },
+              { id: "d", label: "Omdat korte wachtwoorden niet werken." }
+            ],
+            correct: ["b"],
+            feedback: {
+              correct: "Juist! Zo voorkom je dat iemand meteen overal kan inloggen.",
+              incorrect: "Als één wachtwoord uitlekt kunnen anderen anders al je accounts gebruiken."
+            }
+          },
+          {
+            id: "pw-symbool",
+            text: "Welke combinatie maakt een wachtwoord extra sterk?",
+            type: "single",
+            options: [
+              { id: "a", label: "Alleen kleine letters" },
+              { id: "b", label: "Kleine letters en cijfers" },
+              { id: "c", label: "Hoofdletters, kleine letters, cijfers en symbolen" },
+              { id: "d", label: "Alleen emoji" }
+            ],
+            correct: ["c"],
+            feedback: {
+              correct: "Yes! Hoe meer variatie, hoe moeilijker het is om je wachtwoord te raden.",
+              incorrect: "Gebruik verschillende soorten tekens voor een sterk wachtwoord."
+            }
+          },
+          {
+            id: "pw-waarschuwing",
+            text: "Je krijgt een melding dat een wachtwoord mogelijk is gelekt. Wat doe je?",
+            type: "single",
+            options: [
+              { id: "a", label: "Niets, meldingen zijn nooit belangrijk." },
+              { id: "b", label: "Ik verander meteen het wachtwoord." },
+              { id: "c", label: "Ik deel de melding met vrienden." },
+              { id: "d", label: "Ik verwijder het account." }
+            ],
+            correct: ["b"],
+            feedback: {
+              correct: "Goed gezien! Verander het wachtwoord direct om je account te beschermen.",
+              incorrect: "Reageer op een waarschuwing door het wachtwoord snel te veranderen."
+            }
+          },
+          {
+            id: "pw-twee-stappen",
+            text: "Wat doet tweestapsverificatie (2FA)?",
+            type: "single",
+            options: [
+              { id: "a", label: "Het laat je sneller inloggen." },
+              {
+                id: "b",
+                label: "Het vraagt om een extra bevestiging, zoals een code op je telefoon."
+              },
+              { id: "c", label: "Het maakt je wachtwoord zichtbaar." },
+              { id: "d", label: "Het verwijdert oude wachtwoorden." }
+            ],
+            correct: ["b"],
+            feedback: {
+              correct: "Klopt! Het extra slotje maakt het veel moeilijker om in te breken.",
+              incorrect: "Tweestapsverificatie vraagt om een extra bevestiging voor extra veiligheid."
+            }
+          },
+          {
+            id: "pw-voorbeeld",
+            text: "Welke wachtwoordzin is het sterkst?",
+            type: "single",
+            options: [
+              { id: "a", label: "ikhouvanpizza" },
+              { id: "b", label: "P1zzaIsLekk3r!" },
+              { id: "c", label: "pizzapizza" },
+              { id: "d", label: "12345pizza" }
+            ],
+            correct: ["b"],
+            feedback: {
+              correct: "Lekker bezig! Deze zin is lang en bevat verschillende soorten tekens.",
+              incorrect: "Kies een wachtwoordzin die lang is en cijfers en symbolen gebruikt."
+            }
           }
         ]
       },
@@ -58,34 +176,134 @@
           "Vraag toestemming voordat je foto's van anderen deelt",
           "Zet je profiel op privé wanneer mogelijk"
         ],
-        questions: [
+        questionsPerSession: 5,
+        questionPool: [
           {
-            id: "share-1",
+            id: "share-toestemming",
             text: "Je wilt een leuke foto van een klasgenoot delen. Wat doe je?",
             type: "single",
             options: [
               { id: "a", label: "Ik plaats de foto meteen." },
               { id: "b", label: "Ik vraag eerst of het mag." },
-              { id: "c", label: "Ik stuur de foto naar iedereen in mijn contacten." }
+              { id: "c", label: "Ik stuur de foto naar iedereen in mijn contacten." },
+              { id: "d", label: "Ik bewerk de foto zodat niemand hem herkent." }
             ],
             correct: ["b"],
             feedback: {
               correct: "Super! Vraag altijd toestemming voordat je iets deelt wat niet van jou is.",
-              incorrect: "Vraag altijd eerst toestemming voordat je een foto deelt."}
+              incorrect: "Vraag altijd eerst toestemming voordat je een foto deelt."
+            }
           },
           {
-            id: "share-2",
+            id: "share-privé",
             text: "Welke informatie kun je het beste voor jezelf houden?",
             type: "multiple",
             options: [
               { id: "a", label: "Je lievelingskleur" },
               { id: "b", label: "Je thuisadres" },
-              { id: "c", label: "Je geheime wachtwoord" }
+              { id: "c", label: "Je geheime wachtwoord" },
+              { id: "d", label: "Je favoriete dier" }
             ],
             correct: ["b", "c"],
             feedback: {
               correct: "Goed gedaan! Adressen en wachtwoorden zijn privé.",
-              incorrect: "Denk eraan dat persoonlijke gegevens zoals adressen en wachtwoorden geheim moeten blijven."}
+              incorrect: "Denk eraan dat persoonlijke gegevens zoals adressen en wachtwoorden geheim moeten blijven."
+            }
+          },
+          {
+            id: "share-story",
+            text: "Wat controleer je voordat je iets in je story plaatst?",
+            type: "single",
+            options: [
+              { id: "a", label: "Of er persoonlijke informatie zichtbaar is." },
+              { id: "b", label: "Of je genoeg likes krijgt." },
+              { id: "c", label: "Of je vrienden er ook iets op hebben gezet." },
+              { id: "d", label: "Of het filter grappig genoeg is." }
+            ],
+            correct: ["a"],
+            feedback: {
+              correct: "Top! Controleer altijd wat je laat zien voordat je iets deelt.",
+              incorrect: "Kijk of er persoonlijke informatie te zien is voordat je post."
+            }
+          },
+          {
+            id: "share-prive-stand",
+            text: "Waarom is het slim om je account op privé te zetten?",
+            type: "single",
+            options: [
+              { id: "a", label: "Dan kunnen alleen mensen die jij kiest je volgen." },
+              { id: "b", label: "Dan krijg je automatisch meer likes." },
+              { id: "c", label: "Dan hoef je nooit meer een wachtwoord te gebruiken." },
+              { id: "d", label: "Dan verdwijnen oude berichten." }
+            ],
+            correct: ["a"],
+            feedback: {
+              correct: "Juist! Zo bepaal jij wie je berichten kan zien.",
+              incorrect: "Op privé bepalen alleen jouw volgers wat je deelt." }
+          },
+          {
+            id: "share-opinie",
+            text: "Je leest een spannend bericht en wilt het delen. Wat is verstandig?",
+            type: "single",
+            options: [
+              { id: "a", label: "Eerst controleren of het nieuws echt klopt." },
+              { id: "b", label: "Het meteen delen zodat iedereen het ziet." },
+              { id: "c", label: "Alleen de titel lezen en delen." },
+              { id: "d", label: "Een eigen verhaal erbij verzinnen." }
+            ],
+            correct: ["a"],
+            feedback: {
+              correct: "Goed! Controleer bronnen voordat je iets verder verspreidt.",
+              incorrect: "Controleer eerst of het bericht betrouwbaar is voordat je het deelt."
+            }
+          },
+          {
+            id: "share-locatie",
+            text: "Wanneer deel je het beste je locatie op sociale media?",
+            type: "single",
+            options: [
+              { id: "a", label: "Nooit, want locatie is altijd geheim." },
+              { id: "b", label: "Alleen als je zeker weet dat het veilig is en je ouders het goed vinden." },
+              { id: "c", label: "Altijd, zodat iedereen weet waar je bent." },
+              { id: "d", label: "Alleen 's nachts." }
+            ],
+            correct: ["b"],
+            feedback: {
+              correct: "Precies! Wees voorzichtig met het delen van je locatie.",
+              incorrect: "Deel je locatie alleen als je zeker weet dat het veilig is."
+            }
+          },
+          {
+            id: "share-bericht",
+            text: "Iemand vraagt je in een chat om een gênante foto van jezelf. Wat doe je?",
+            type: "single",
+            options: [
+              { id: "a", label: "Ik stuur de foto om aardig te zijn." },
+              { id: "b", label: "Ik maak een grap en stuur toch iets." },
+              { id: "c", label: "Ik stuur niets en vertel het aan een volwassene die ik vertrouw." },
+              { id: "d", label: "Ik vraag andere vrienden wat zij zouden doen en stuur het dan." }
+            ],
+            correct: ["c"],
+            feedback: {
+              correct: "Heel goed! Deel nooit iets waar je je niet prettig bij voelt en vertel het aan een volwassene.",
+              incorrect: "Deel geen gênante foto's en praat met iemand die je vertrouwt."
+            }
+          },
+          {
+            id: "share-reageren",
+            text: "Je ziet een gemene reactie onder een foto van een klasgenoot. Wat kun je doen?",
+            type: "multiple",
+            options: [
+              { id: "a", label: "De reactie melden bij het platform." },
+              { id: "b", label: "Een aardige reactie plaatsen ter ondersteuning." },
+              { id: "c", label: "Zelf ook een gemene reactie plaatsen." },
+              { id: "d", label: "Er met een volwassene over praten." }
+            ],
+            correct: ["a", "b", "d"],
+            feedback: {
+              correct: "Goed dat je het probleem aanpakt en steun geeft!",
+              incorrect: "Meld nare reacties, bied steun en bespreek het met een volwassene."
+            }
           }
         ]
       },
@@ -99,20 +317,140 @@
           "Praat met je ouders of leerkracht als iemand je ongemakkelijk laat voelen",
           "Spreek niet af met iemand die je alleen via internet kent"
         ],
-        questions: [
+        questionsPerSession: 5,
+        questionPool: [
           {
-            id: "friends-1",
+            id: "friends-bericht",
             text: "Wat doe je als iemand die je niet kent je een bericht stuurt?",
             type: "single",
             options: [
-              { id: "a", label: "Ik reageer meteen en vertel veel over mezelf." },
-              { id: "b", label: "Ik vertel het aan een volwassene die ik vertrouw." },
-              { id: "c", label: "Ik ga met die persoon afspreken." }
+              {
+                id: "a",
+                label: "Ik reageer meteen en vertel veel over mezelf."
+              },
+              {
+                id: "b",
+                label: "Ik vertel het aan een volwassene die ik vertrouw."
+              },
+              { id: "c", label: "Ik ga met die persoon afspreken." },
+              { id: "d", label: "Ik stuur mijn telefoonnummer." }
             ],
             correct: ["b"],
             feedback: {
               correct: "Heel goed! Praat altijd met een volwassene als iemand je iets vreemd vraagt.",
-              incorrect: "Vertel het aan een volwassene die je vertrouwt en reageer niet zomaar."}
+              incorrect: "Vertel het aan een volwassene die je vertrouwt en reageer niet zomaar."
+            }
+          },
+          {
+            id: "friends-afspraak",
+            text: "Iemand die je online kent vraagt om af te spreken. Wat is verstandig?",
+            type: "single",
+            options: [
+              { id: "a", label: "Ik ga erheen en vertel het niemand." },
+              { id: "b", label: "Ik vertel mijn ouders of leerkracht en ga niet zonder hun toestemming." },
+              { id: "c", label: "Ik neem al mijn vrienden mee." },
+              { id: "d", label: "Ik vraag om een cadeau in ruil voor een ontmoeting." }
+            ],
+            correct: ["b"],
+            feedback: {
+              correct: "Juist! Spreek nooit af zonder toestemming van een volwassene.",
+              incorrect: "Vertel het altijd aan een volwassene en ga niet zomaar naar een afspraak." }
+          },
+          {
+            id: "friends-profiel",
+            text: "Hoe herken je een nepaccount?",
+            type: "single",
+            options: [
+              { id: "a", label: "Er staan weinig foto's of rare berichten op." },
+              { id: "b", label: "Ze hebben altijd heel veel volgers." },
+              { id: "c", label: "Het account is ouder dan een jaar." },
+              { id: "d", label: "Ze gebruiken emoji in hun naam." }
+            ],
+            correct: ["a"],
+            feedback: {
+              correct: "Goed gezien! Nepaccounts hebben vaak weinig echte informatie.",
+              incorrect: "Let op accounts met weinig informatie of vreemde berichten."
+            }
+          },
+          {
+            id: "friends-geheim",
+            text: "Een online vriend vraagt je om jullie gesprekken geheim te houden. Wat doe je?",
+            type: "single",
+            options: [
+              { id: "a", label: "Ik doe wat hij vraagt, want geheimen zijn spannend." },
+              { id: "b", label: "Ik vertel het aan een volwassene die ik vertrouw." },
+              { id: "c", label: "Ik verwijder het gesprek en zeg niets." },
+              { id: "d", label: "Ik stuur een geheim terug." }
+            ],
+            correct: ["b"],
+            feedback: {
+              correct: "Precies! Geheimen online zijn een teken dat je hulp moet vragen.",
+              incorrect: "Vertel het aan een volwassene als iemand je vraagt iets geheim te houden."
+            }
+          },
+          {
+            id: "friends-games",
+            text: "Met wie chat je in een online game?",
+            type: "single",
+            options: [
+              { id: "a", label: "Met iedereen die online is." },
+              { id: "b", label: "Alleen met mensen die ik in het echt ken of die door een volwassene zijn goedgekeurd." },
+              { id: "c", label: "Met mensen die veel prijzen hebben gewonnen." },
+              { id: "d", label: "Met degene die het hardst schreeuwt." }
+            ],
+            correct: ["b"],
+            feedback: {
+              correct: "Goed! Chat alleen met mensen die je vertrouwt of die zijn goedgekeurd.",
+              incorrect: "Blijf bij mensen die je kent of die door een volwassene zijn goedgekeurd."
+            }
+          },
+          {
+            id: "friends-prijs",
+            text: "Je wint zogenaamd een prijs via een chatbericht en moet je gegevens invullen. Wat doe je?",
+            type: "single",
+            options: [
+              { id: "a", label: "Ik geef al mijn gegevens door zodat ik de prijs krijg." },
+              { id: "b", label: "Ik klik op de link en kijk wel wat er gebeurt." },
+              { id: "c", label: "Ik verwijder het bericht en meld het aan een volwassene." },
+              { id: "d", label: "Ik vraag om een grotere prijs." }
+            ],
+            correct: ["c"],
+            feedback: {
+              correct: "Heel goed! Dit kan phishing zijn, dus verwijder het bericht en waarschuw iemand.",
+              incorrect: "Geef geen gegevens door bij verdachte berichten en vertel het aan een volwassene."
+            }
+          },
+          {
+            id: "friends-wachtwoord",
+            text: "Een online vriend vraagt om je wachtwoord zodat hij kan helpen. Wat doe je?",
+            type: "single",
+            options: [
+              { id: "a", label: "Ik geef mijn wachtwoord, want hij lijkt aardig." },
+              { id: "b", label: "Ik bedank hem maar deel mijn wachtwoord niet." },
+              { id: "c", label: "Ik stuur het wachtwoord via een geheime code." },
+              { id: "d", label: "Ik verander mijn wachtwoord en stuur het daarna." }
+            ],
+            correct: ["b"],
+            feedback: {
+              correct: "Precies! Deel je wachtwoord nooit, ook niet met vrienden.",
+              incorrect: "Wachtwoorden zijn altijd privé, deel ze met niemand."
+            }
+          },
+          {
+            id: "friends-gevoel",
+            text: "Iemand online maakt je onzeker of bang. Wat kun je doen?",
+            type: "multiple",
+            options: [
+              { id: "a", label: "Het gesprek stoppen en de persoon blokkeren." },
+              { id: "b", label: "Een volwassene die je vertrouwt om hulp vragen." },
+              { id: "c", label: "Doorgaan met chatten zodat het misschien stopt." },
+              { id: "d", label: "Bewijs bewaren door een screenshot te maken." }
+            ],
+            correct: ["a", "b", "d"],
+            feedback: {
+              correct: "Goed gedaan! Stop het gesprek, bewaar bewijs en zoek hulp.",
+              incorrect: "Stop de chat, blokkeer de persoon, maak een screenshot en vertel het aan een volwassene."
+            }
           }
         ]
       }
@@ -183,6 +521,34 @@
     return `${basePrefix}${Date.now().toString(36)}-${randomPart}`;
   }
 
+  function shuffleArray(input = []) {
+    const array = Array.isArray(input) ? [...input] : [];
+    for (let i = array.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  function selectRandomItems(pool = [], count = pool.length) {
+    if (!Array.isArray(pool) || pool.length === 0) {
+      return [];
+    }
+    const effectiveCount = Math.min(Math.max(count, 0), pool.length);
+    const shuffled = shuffleArray(pool);
+    return shuffled.slice(0, effectiveCount);
+  }
+
+  function cloneQuestionWithShuffledOptions(question) {
+    const clone = JSON.parse(JSON.stringify(question || {}));
+    if (Array.isArray(clone.options)) {
+      clone.options = shuffleArray(clone.options);
+    } else {
+      clone.options = [];
+    }
+    return clone;
+  }
+
   const SESSION_EVENT_NAME = "dsq:sessions-updated";
 
   class DailySessionStore {
@@ -222,14 +588,43 @@
       return JSON.parse(JSON.stringify(this.memoryStore[dateKey]));
     }
 
-    _saveByKey(dateKey, data) {
-      const serialized = JSON.stringify(data);
+    _saveByKey(dateKey, data, options = {}) {
+      const { merge = true } = options;
+      const incoming =
+        data && typeof data === "object" ? { ...data } : { sessions: [] };
+
+      let dataToStore = incoming;
+
+      if (merge) {
+        const existing = this._readByKey(dateKey);
+        const sessionMap = new Map();
+
+        (existing.sessions || []).forEach((session) => {
+          if (session && session.id) {
+            sessionMap.set(session.id, session);
+          }
+        });
+
+        (incoming.sessions || []).forEach((session) => {
+          if (session && session.id) {
+            sessionMap.set(session.id, session);
+          }
+        });
+
+        dataToStore = {
+          ...existing,
+          ...incoming,
+          sessions: Array.from(sessionMap.values())
+        };
+      }
+
+      const serialized = JSON.stringify(dataToStore);
       if (this.storageEnabled) {
         window.localStorage.setItem(dateKey, serialized);
       } else {
         this.memoryStore[dateKey] = JSON.parse(serialized);
       }
-      this._indexSessions(dateKey, data.sessions);
+      this._indexSessions(dateKey, dataToStore.sessions);
       this._broadcastChange();
     }
 
@@ -262,7 +657,6 @@
     createSession(name) {
       const now = new Date();
       const dateKey = this._getDateKey(now);
-      const data = this._readByKey(dateKey);
       const session = {
         id: generateId("session"),
         dateKey,
@@ -275,8 +669,7 @@
         lastUpdated: now.toISOString()
       };
 
-      data.sessions.push(session);
-      this._saveByKey(dateKey, data);
+      this._saveByKey(dateKey, { sessions: [session] });
       return session;
     }
 
@@ -541,6 +934,40 @@
     if (userConfig.strings) {
       config.strings = { ...config.strings, ...userConfig.strings };
     }
+
+    config.modules = config.modules.map((module) => {
+      const normalizedModule = { ...module };
+      if (
+        !Array.isArray(normalizedModule.questionPool) &&
+        Array.isArray(normalizedModule.questions)
+      ) {
+        normalizedModule.questionPool = normalizedModule.questions;
+      }
+
+      normalizedModule.questionPool = Array.isArray(normalizedModule.questionPool)
+        ? normalizedModule.questionPool.map((question) =>
+            JSON.parse(JSON.stringify(question))
+          )
+        : [];
+
+      const poolLength = normalizedModule.questionPool.length;
+
+      if (
+        typeof normalizedModule.questionsPerSession !== "number" ||
+        Number.isNaN(normalizedModule.questionsPerSession) ||
+        normalizedModule.questionsPerSession <= 0
+      ) {
+        normalizedModule.questionsPerSession = Math.min(5, poolLength);
+      } else {
+        const desired = Math.floor(normalizedModule.questionsPerSession);
+        normalizedModule.questionsPerSession =
+          poolLength > 0 ? Math.max(1, Math.min(desired, poolLength)) : 0;
+      }
+
+      delete normalizedModule.questions;
+      return normalizedModule;
+    });
+
     return config;
   }
 
@@ -557,6 +984,7 @@
         );
       }
       this.sessionStore = new DailySessionStore();
+      this.sessionModules = [];
       this.sessionId = null;
       this.sessionResults = new Map();
       this.participantName = "";
@@ -564,9 +992,8 @@
       this.currentModuleIndex = -1;
       this.currentQuestionIndex = -1;
       this.score = 0;
-      this.totalQuestions = this.config.modules.reduce(
-        (count, module) => count + module.questions.length,
-        0
+      this.totalQuestions = this._calculateExpectedQuestionCount(
+        this.config.modules
       );
       this.renderBaseLayout();
     }
@@ -603,6 +1030,10 @@
       this.sessionResults = new Map();
       this.participantName = "";
       this.sessionCompleted = false;
+      this.sessionModules = [];
+      this.totalQuestions = this._calculateExpectedQuestionCount(
+        this.config.modules
+      );
 
       const introCard = createElement("section", {
         className: "dsq-card dsq-intro"
@@ -674,6 +1105,10 @@
       const session = this.sessionStore.createSession(this.participantName);
       this.sessionId = session?.id || null;
 
+      this.sessionModules = this._prepareModulesForSession();
+      this.totalQuestions = this._calculateExpectedQuestionCount(
+        this.sessionModules
+      );
       this.currentModuleIndex = 0;
       this.currentQuestionIndex = -1;
       this.score = 0;
@@ -681,7 +1116,61 @@
     }
 
     get currentModule() {
-      return this.config.modules[this.currentModuleIndex];
+      const modules = this.sessionModules.length
+        ? this.sessionModules
+        : this.config.modules;
+      return modules[this.currentModuleIndex];
+    }
+
+    _prepareModulesForSession() {
+      return this.config.modules.map((module) => {
+        const pool = Array.isArray(module.questionPool)
+          ? module.questionPool
+          : [];
+        const questionsPerSession = Math.min(
+          module.questionsPerSession || pool.length,
+          pool.length
+        );
+        const selectedQuestions = selectRandomItems(
+          pool,
+          questionsPerSession
+        ).map((question) => cloneQuestionWithShuffledOptions(question));
+
+        return {
+          ...module,
+          tips: Array.isArray(module.tips) ? [...module.tips] : [],
+          questions: selectedQuestions
+        };
+      });
+    }
+
+    _getQuestionCountForModule(module) {
+      if (!module) {
+        return 0;
+      }
+      if (Array.isArray(module.questions) && module.questions.length) {
+        return module.questions.length;
+      }
+      const poolLength = Array.isArray(module.questionPool)
+        ? module.questionPool.length
+        : 0;
+      if (
+        typeof module.questionsPerSession === "number" &&
+        module.questionsPerSession > 0
+      ) {
+        return Math.min(module.questionsPerSession, poolLength || 0);
+      }
+      return poolLength;
+    }
+
+    _calculateExpectedQuestionCount(modules = []) {
+      if (!Array.isArray(modules)) {
+        return 0;
+      }
+      return modules.reduce(
+        (total, module) => total + this._getQuestionCountForModule(module),
+        0
+      );
     }
 
     renderModuleIntro() {
@@ -987,7 +1476,7 @@
       nextButton.addEventListener("click", () => {
         this.currentModuleIndex += 1;
         this.currentQuestionIndex = -1;
-        if (this.currentModuleIndex >= this.config.modules.length) {
+        if (this.currentModuleIndex >= this.sessionModules.length) {
           this.renderCertificate();
         } else {
           this.renderModuleIntro();
@@ -1072,9 +1561,15 @@
     }
 
     getCompletionSummary() {
-      const modules = this.config.modules.map((module) => {
+      const sourceModules = this.sessionModules.length
+        ? this.sessionModules
+        : this.config.modules;
+      const modules = sourceModules.map((module) => {
         const moduleResult = this.sessionResults.get(module.id);
-        const questions = module.questions.map((question) => {
+        const questionList = Array.isArray(module.questions)
+          ? module.questions
+          : module.questionPool || [];
+        const questions = questionList.map((question) => {
           const questionResult = moduleResult?.questions?.get
             ? moduleResult.questions.get(question.id)
             : undefined;
@@ -1192,33 +1687,56 @@
     }
 
     updateProgress(isComplete = false) {
-      const moduleCount = this.config.modules.length;
-      let completedModules = this.currentModuleIndex;
+      const modules = this.sessionModules.length
+        ? this.sessionModules
+        : this.config.modules;
+      const moduleCount = modules.length;
+      let completedModules = 0;
       let completedQuestions = 0;
 
-      if (this.currentModuleIndex >= 0) {
-        completedModules = Math.max(0, this.currentModuleIndex);
-        const modulesBefore = this.config.modules.slice(0, this.currentModuleIndex);
+      if (this.currentModuleIndex >= 0 && moduleCount > 0) {
+        completedModules = Math.min(
+          Math.max(this.currentModuleIndex, 0),
+          moduleCount
+        );
+
+        const modulesBefore = modules.slice(0, completedModules);
         completedQuestions = modulesBefore.reduce(
-          (count, module) => count + module.questions.length,
+          (count, module) => count + this._getQuestionCountForModule(module),
           0
         );
-        if (this.currentQuestionIndex > -1) {
-          completedQuestions += this.currentQuestionIndex;
-        } else if (this.currentQuestionIndex === -1 && this.currentModuleIndex >= moduleCount) {
-          completedQuestions = this.totalQuestions;
+
+        const currentModule = modules[this.currentModuleIndex];
+        if (
+          currentModule &&
+          this.currentModuleIndex < moduleCount &&
+          this.currentQuestionIndex > -1
+        ) {
+          const questionCount = this._getQuestionCountForModule(currentModule);
+          completedQuestions += Math.min(this.currentQuestionIndex, questionCount);
         }
       }
 
+      const totalForDisplay =
+        this.totalQuestions || this._calculateExpectedQuestionCount(modules);
+
+      if (isComplete) {
+        completedModules = moduleCount;
+        completedQuestions = totalForDisplay;
+      }
+
+      const safeTotal = totalForDisplay > 0 ? totalForDisplay : 1;
       const progressPercentage = isComplete
         ? 100
-        : Math.floor((completedQuestions / this.totalQuestions) * 100);
+        : Math.floor((completedQuestions / safeTotal) * 100);
+
+      const boundedCompleted = Math.min(completedQuestions, totalForDisplay);
 
       this.progressEl.innerHTML = `
         <div class="dsq-progress-bar">
           <div class="dsq-progress-bar-fill" style="width: ${progressPercentage}%"></div>
         </div>
-        <span class="dsq-progress-text">${completedQuestions}/${this.totalQuestions} vragen afgerond</span>
+        <span class="dsq-progress-text">${boundedCompleted}/${totalForDisplay} vragen afgerond</span>
       `;
     }
   }
