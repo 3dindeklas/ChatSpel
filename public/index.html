@@ -15,10 +15,29 @@
     ></script>
     <script src="../src/digitalSafetyQuiz.js"></script>
     <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        new DigitalSafetyQuiz({
-          container: "#quiz"
-        });
+      document.addEventListener("DOMContentLoaded", async function () {
+        const container = document.querySelector("#quiz");
+        if (container) {
+          container.textContent = "Quiz wordt geladen...";
+        }
+
+        try {
+          const response = await fetch("/api/quiz-config");
+          if (!response.ok) {
+            throw new Error("Kon configuratie niet laden");
+          }
+          const config = await response.json();
+          new DigitalSafetyQuiz({
+            container: "#quiz",
+            config,
+            apiBaseUrl: ""
+          });
+        } catch (error) {
+          if (container) {
+            container.textContent =
+              "De quiz kon niet worden geladen. Probeer het later opnieuw.";
+          }
+        }
       });
     </script>
   </body>

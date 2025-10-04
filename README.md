@@ -10,11 +10,22 @@ Deze repository bevat een kant-en-klare quizmodule die je kunt insluiten op bijv
 
 ## Lokaal testen
 
-Open `public/index.html` in je browser (bijvoorbeeld door het bestand te openen vanuit Finder/Explorer of met een lokale webserver).
+Installeer eerst de afhankelijkheden en start daarna de Node-server. De server levert de quizbestanden, API's en beheerschermen uit.
+
+```bash
+npm install
+npm start
+```
+
+Open vervolgens [http://localhost:3000/](http://localhost:3000/) in je browser om de quiz te bekijken. Het live dashboard is bereikbaar via `public/dashboard.html` en het beheer van vragen via `public/questions.html`.
+
+### Vragen beheren
+
+Ga naar [http://localhost:3000/questions.html](http://localhost:3000/questions.html) om het overzicht van vragen te zien. Vanuit dit scherm kun je bestaande vragen bewerken of nieuwe vragen toevoegen. Het formulier ondersteunt het aanpassen van antwoordopties, feedbackteksten en het type vraag (één antwoord of meerdere antwoorden).
 
 ## Insluiten op Wix
 
-1. Upload de bestanden `digitalSafetyQuiz.js` en `digitalSafetyQuiz.css` naar een publiek toegankelijke locatie (bijvoorbeeld GitHub, je eigen hosting of Wix Static Files).
+1. Upload de bestanden `digitalSafetyQuiz.js` en `digitalSafetyQuiz.css` naar een publiek toegankelijke locatie (bijvoorbeeld GitHub, je eigen hosting of Wix Static Files). Wanneer je de nieuwe back-end functionaliteit wilt gebruiken heb je daarnaast een server nodig die de API aanbiedt (zie bovenstaande stappen).
 2. Voeg op Wix een **Embed Code** (HTML iframe) element toe.
 3. Plak onderstaande HTML en pas zo nodig de paden naar de bestanden aan.
 

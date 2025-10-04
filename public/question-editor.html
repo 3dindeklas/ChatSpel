@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vraag bewerken</title>
+    <link rel="stylesheet" href="../styles/admin.css" />
+  </head>
+  <body>
+    <main class="admin-container">
+      <header class="admin-header">
+        <h1 id="editor-title">Nieuwe vraag</h1>
+        <a class="admin-button admin-secondary" href="questions.html">Terug naar overzicht</a>
+      </header>
+      <section class="admin-card">
+        <div id="editor-feedback"></div>
+        <form class="admin-form" id="question-form">
+          <div class="admin-field">
+            <label for="question-module">Categorie</label>
+            <select id="question-module" required></select>
+          </div>
+          <div class="admin-field">
+            <label for="question-text">Vraag</label>
+            <textarea id="question-text" rows="3" required></textarea>
+          </div>
+          <div class="admin-field">
+            <label for="question-type">Type vraag</label>
+            <select id="question-type">
+              <option value="single">Meerkeuze (1 antwoord)</option>
+              <option value="multiple">Meerkeuze (meerdere antwoorden)</option>
+            </select>
+          </div>
+          <div class="admin-field">
+            <label>Antwoorden</label>
+            <div class="admin-options" id="options-list"></div>
+            <button type="button" class="admin-button admin-secondary" id="add-option">
+              Optie toevoegen
+            </button>
+          </div>
+          <div class="admin-field">
+            <label for="feedback-correct">Feedback bij goed antwoord</label>
+            <textarea id="feedback-correct" rows="2"></textarea>
+          </div>
+          <div class="admin-field">
+            <label for="feedback-incorrect">Feedback bij fout antwoord</label>
+            <textarea id="feedback-incorrect" rows="2"></textarea>
+          </div>
+          <div class="admin-actions">
+            <button type="submit" class="admin-button">Opslaan</button>
+            <button type="button" class="admin-button admin-secondary" id="cancel-button">
+              Annuleren
+            </button>
+          </div>
+        </form>
+      </section>
+    </main>
+    <script src="../src/questionEditor.js" defer></script>
+  </body>
+</html>

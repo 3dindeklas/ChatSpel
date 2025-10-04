@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vragenbeheer</title>
+    <link rel="stylesheet" href="../styles/admin.css" />
+  </head>
+  <body>
+    <main class="admin-container">
+      <header class="admin-header">
+        <h1>Vragenbeheer</h1>
+        <a class="admin-button" href="question-editor.html">Nieuwe vraag</a>
+      </header>
+      <section class="admin-card" id="questions-card">
+        <div id="questions-feedback"></div>
+        <table class="admin-table" id="questions-table" hidden>
+          <thead>
+            <tr>
+              <th>Vraag</th>
+              <th>Categorie</th>
+              <th>Type</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="admin-empty" id="questions-empty" hidden>
+          Geen vragen gevonden.
+        </div>
+      </section>
+    </main>
+    <script src="../src/adminQuestions.js" defer></script>
+  </body>
+</html>
