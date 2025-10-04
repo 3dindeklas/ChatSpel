@@ -37,26 +37,279 @@ const HEADERS = {
   completions: ["Timestamp", "Session ID", "End Time", "Summary"]
 };
 
-const SESSION_COLS = {
-  timestamp: 0,
-  id: 1,
-  name: 2,
-  status: 3,
-  startTime: 4,
-  lastSeen: 5,
-  summary: 6,
-  endTime: 7
+const TABLE_CONFIG = {
+  sessions: {
+    sheetName: SHEET_NAMES.sessions,
+    headers: HEADERS.sessions,
+    keys: [
+      "timestamp",
+      "sessionId",
+      "name",
+      "status",
+      "startTime",
+      "lastSeen",
+      "summary",
+      "endTime"
+    ],
+    keyColumn: "sessionId",
+    indexPrefix: "session:"
+  },
+  heartbeats: {
+    sheetName: SHEET_NAMES.heartbeats,
+    headers: HEADERS.heartbeats,
+    keys: ["timestamp", "sessionId", "lastSeen"],
+    keyColumn: null,
+    indexPrefix: "heartbeat:"
+  },
+  attempts: {
+    sheetName: SHEET_NAMES.attempts,
+    headers: HEADERS.attempts,
+    keys: [
+      "timestamp",
+      "sessionId",
+      "moduleId",
+      "questionId",
+      "selectedOptionIds",
+      "isCorrect",
+      "rawPayload"
+    ],
+    keyColumn: null,
+    indexPrefix: "attempt:"
+  },
+  completions: {
+    sheetName: SHEET_NAMES.completions,
+    headers: HEADERS.completions,
+    keys: ["timestamp", "sessionId", "endTime", "summary"],
+    keyColumn: null,
+    indexPrefix: "completion:"
+  }
 };
 
-const ATTEMPT_COLS = {
-  timestamp: 0,
-  sessionId: 1,
-  moduleId: 2,
-  questionId: 3,
-  selectedOptionIds: 4,
-  isCorrect: 5,
-  rawPayload: 6
+const TABLES = {
+  sessions: new SheetTable(TABLE_CONFIG.sessions),
+  heartbeats: new SheetTable(TABLE_CONFIG.heartbeats),
+  attempts: new SheetTable(TABLE_CONFIG.attempts),
+  completions: new SheetTable(TABLE_CONFIG.completions)
 };
+
+const SCRIPT_PROPERTIES = PropertiesService.getScriptProperties();
+
+function SheetTable(config) {
+  this.sheetName = config.sheetName;
+  this.headers = config.headers || [];
+  this.keys = config.keys || [];
+  this.keyColumn = config.keyColumn || null;
+  this.indexPrefix = config.indexPrefix || "";
+  this.cachedSheet = null;
+}
+
+SheetTable.prototype.ensure = function ensure() {
+  const sheet = this.getSheet();
+  if (!this.headers.length) {
+    return sheet;
+  }
+
+  const width = this.headers.length;
+  const existing = sheet.getRange(1, 1, 1, width).getValues()[0];
+  let needsUpdate = existing.length !== width;
+  if (!needsUpdate) {
+    for (var index = 0; index < width; index += 1) {
+      if (existing[index] !== this.headers[index]) {
+        needsUpdate = true;
+        break;
+      }
+    }
+  }
+
+  if (needsUpdate) {
+    sheet.getRange(1, 1, 1, width).setValues([this.headers]);
+  }
+
+  if (sheet.getFrozenRows() < 1) {
+    sheet.setFrozenRows(1);
+  }
+
+  return sheet;
+};
+
+SheetTable.prototype.getSheet = function getSheetInstance() {
+  if (!this.cachedSheet) {
+    this.cachedSheet = getSheet(this.sheetName);
+  }
+  return this.cachedSheet;
+};
+
+SheetTable.prototype.getKeyColumnIndex = function getKeyColumnIndex() {
+  if (!this.keyColumn) {
+    return -1;
+  }
+  const index = this.keys.indexOf(this.keyColumn);
+  return index === -1 ? -1 : index + 1;
+};
+
+SheetTable.prototype.lookupIndex = function lookupIndex(keyValue) {
+  if (!this.indexPrefix || !keyValue) {
+    return 0;
+  }
+  const propertyKey = this.indexPrefix + String(keyValue);
+  const stored = SCRIPT_PROPERTIES.getProperty(propertyKey);
+  const number = stored ? parseInt(stored, 10) : 0;
+  return Number.isNaN(number) ? 0 : number;
+};
+
+SheetTable.prototype.saveIndex = function saveIndex(keyValue, rowNumber) {
+  if (!this.indexPrefix || !keyValue || !rowNumber) {
+    return;
+  }
+  const propertyKey = this.indexPrefix + String(keyValue);
+  SCRIPT_PROPERTIES.setProperty(propertyKey, String(rowNumber));
+};
+
+SheetTable.prototype.clearIndex = function clearIndex(keyValue) {
+  if (!this.indexPrefix || !keyValue) {
+    return;
+  }
+  const propertyKey = this.indexPrefix + String(keyValue);
+  SCRIPT_PROPERTIES.deleteProperty(propertyKey);
+};
+
+SheetTable.prototype.recordFromRow = function recordFromRow(rowValues) {
+  const record = {};
+  for (var index = 0; index < this.keys.length; index += 1) {
+    record[this.keys[index]] = rowValues[index];
+  }
+  return record;
+};
+
+SheetTable.prototype.buildRow = function buildRow(record) {
+  const row = [];
+  for (var index = 0; index < this.keys.length; index += 1) {
+    var key = this.keys[index];
+    row.push(record && Object.prototype.hasOwnProperty.call(record, key) ? record[key] : "");
+  }
+  return row;
+};
+
+SheetTable.prototype.findRowNumber = function findRowNumber(sheet, keyValue) {
+  if (!this.keyColumn || !keyValue) {
+    return 0;
+  }
+
+  const keyColumnIndex = this.getKeyColumnIndex();
+  if (keyColumnIndex < 1) {
+    return 0;
+  }
+
+  const indexedRow = this.lookupIndex(keyValue);
+  if (indexedRow > 1) {
+    const cellValue = sheet.getRange(indexedRow, keyColumnIndex, 1, 1).getValue();
+    if (String(cellValue) === String(keyValue)) {
+      return indexedRow;
+    }
+    this.clearIndex(keyValue);
+  }
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    return 0;
+  }
+
+  const range = sheet.getRange(2, keyColumnIndex, lastRow - 1, 1);
+  const values = range.getValues();
+  for (var index = 0; index < values.length; index += 1) {
+    if (String(values[index][0]) === String(keyValue)) {
+      const rowNumber = index + 2;
+      this.saveIndex(keyValue, rowNumber);
+      return rowNumber;
+    }
+  }
+
+  return 0;
+};
+
+SheetTable.prototype.getByKey = function getByKey(keyValue) {
+  if (!this.keyColumn) {
+    return null;
+  }
+  const sheet = this.ensure();
+  const rowNumber = this.findRowNumber(sheet, keyValue);
+  if (!rowNumber) {
+    return null;
+  }
+  const rowValues = sheet.getRange(rowNumber, 1, 1, this.keys.length).getValues()[0];
+  return {
+    row: rowNumber,
+    record: this.recordFromRow(rowValues)
+  };
+};
+
+SheetTable.prototype.upsert = function upsert(record) {
+  if (!this.keyColumn) {
+    throw new Error("Key column is not configured for sheet " + this.sheetName);
+  }
+
+  const keyValue = String(record[this.keyColumn] || "").trim();
+  if (!keyValue) {
+    throw new Error("Missing key value for sheet " + this.sheetName);
+  }
+
+  const sheet = this.ensure();
+  const rowValues = this.buildRow(record);
+  const existing = this.findRowNumber(sheet, keyValue);
+  const targetRow = existing || sheet.getLastRow() + 1;
+
+  sheet.getRange(targetRow, 1, 1, this.keys.length).setValues([rowValues]);
+  this.saveIndex(keyValue, targetRow);
+
+  return {
+    row: targetRow,
+    record: this.recordFromRow(rowValues)
+  };
+};
+
+SheetTable.prototype.append = function append(record) {
+  const sheet = this.ensure();
+  const rowValues = this.buildRow(record);
+  const targetRow = sheet.getLastRow() + 1;
+  sheet.getRange(targetRow, 1, 1, this.keys.length).setValues([rowValues]);
+  return {
+    row: targetRow,
+    record: this.recordFromRow(rowValues)
+  };
+};
+
+SheetTable.prototype.getAll = function getAll() {
+  const sheet = this.ensure();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    return [];
+  }
+  const values = sheet.getRange(2, 1, lastRow - 1, this.keys.length).getValues();
+  const records = [];
+  for (var index = 0; index < values.length; index += 1) {
+    const record = this.recordFromRow(values[index]);
+    if (!this.keyColumn) {
+      records.push(record);
+      continue;
+    }
+    const keyValue = String(record[this.keyColumn] || "").trim();
+    if (keyValue) {
+      this.saveIndex(keyValue, index + 2);
+      records.push(record);
+    }
+  }
+  return records;
+};
+
+function withLock(callback) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    return callback();
+  } finally {
+    lock.releaseLock();
+  }
+}
 
 /** Entry point for GET requests */
 function doGet(e) {
@@ -68,24 +321,31 @@ function doPost(e) {
   return handleRequest("POST", e);
 }
 
+/** Entry point for OPTIONS (CORS preflight) requests */
+function doOptions() {
+  return emptyResponse();
+}
+
 function handleRequest(method, e) {
   try {
     ensureSheets();
     const path = extractPath(e);
     const segments = path ? path.split("/").filter(Boolean) : [];
 
-    if (method === "GET") {
-      return handleGet(segments);
+    const actualMethod = resolveMethodOverride(method, e);
+
+    if (actualMethod === "GET") {
+      return handleGet(segments, e);
     }
 
-    if (method === "POST") {
+    if (actualMethod === "POST") {
       return handlePost(segments, e);
     }
 
-    return jsonResponse({ error: "Method not supported" });
+    return jsonResponse({ error: "Method not supported" }, e);
   } catch (error) {
     console.error(error);
-    return jsonResponse({ error: error.message || "Unexpected error" });
+    return jsonResponse({ error: error.message || "Unexpected error" }, e);
   }
 }
 
@@ -100,6 +360,14 @@ function extractPath(e) {
 }
 
 function parsePayload(e) {
+  if (e && e.parameter && typeof e.parameter.payload === "string") {
+    try {
+      return JSON.parse(e.parameter.payload);
+    } catch (error) {
+      // ignore and fall through to postData parsing
+    }
+  }
+
   if (!e || !e.postData || !e.postData.contents) {
     return {};
   }
@@ -110,14 +378,59 @@ function parsePayload(e) {
   }
 }
 
-function jsonResponse(body) {
-  const output = ContentService.createTextOutput(
-    JSON.stringify(body || {})
-  );
-  output.setMimeType(ContentService.MimeType.JSON);
-  output.setHeader("Access-Control-Allow-Origin", "*");
-  output.setHeader("Cache-Control", "no-store");
-  return output;
+function resolveMethodOverride(method, request) {
+  if (method !== "GET" || !request || !request.parameter) {
+    return method;
+  }
+
+  const override = request.parameter.method || request.parameter._method;
+  if (!override) {
+    return method;
+  }
+
+  const normalized = String(override).trim().toUpperCase();
+  if (normalized === "POST") {
+    return "POST";
+  }
+
+  return method;
+}
+
+function jsonResponse(body, request) {
+  const payload = JSON.stringify(body || {});
+  const callback = extractJsonpCallback(request);
+
+  if (callback) {
+    return ContentService.createTextOutput(`${callback}(${payload});`).setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+
+  return ContentService.createTextOutput(payload).setMimeType(ContentService.MimeType.JSON);
+}
+
+function emptyResponse() {
+  return ContentService.createTextOutput("").setMimeType(ContentService.MimeType.TEXT);
+}
+
+function extractJsonpCallback(request) {
+  if (!request || !request.parameter) {
+    return "";
+  }
+
+  const raw = request.parameter.callback || request.parameter.cb;
+  if (!raw) {
+    return "";
+  }
+
+  const callback = String(raw).trim();
+  if (!callback) {
+    return "";
+  }
+
+  if (!/^[$A-Z_][0-9A-Z_.$]*$/i.test(callback)) {
+    return "";
+  }
+
+  return callback;
 }
 
 function getSpreadsheet() {
@@ -137,38 +450,22 @@ function getSheet(name) {
 }
 
 function ensureSheets() {
-  Object.keys(SHEET_NAMES).forEach((key) => {
-    const sheet = getSheet(SHEET_NAMES[key]);
-    const headers = HEADERS[key];
-    if (!headers || !headers.length) {
-      return;
-    }
-    const existing = sheet
-      .getRange(1, 1, 1, headers.length)
-      .getValues()[0];
-    const needsUpdate = headers.some(
-      (header, index) => existing[index] !== header
-    );
-    if (needsUpdate) {
-      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    }
-    if (sheet.getFrozenRows() < 1) {
-      sheet.setFrozenRows(1);
-    }
+  Object.keys(TABLES).forEach(function (key) {
+    TABLES[key].ensure();
   });
 }
 
-function handleGet(segments) {
+function handleGet(segments, request) {
   if (segments.length === 2 && segments[0] === "api" && segments[1] === "dashboard") {
-    return jsonResponse(buildDashboardSnapshot());
+    return jsonResponse(buildDashboardSnapshot(), request);
   }
-  return jsonResponse({ error: "Not found" });
+  return jsonResponse({ error: "Not found" }, request);
 }
 
 function handlePost(segments, e) {
   if (segments.length >= 2 && segments[0] === "api" && segments[1] === "sessions") {
     if (segments.length === 2) {
-      return jsonResponse(createSession(parsePayload(e)));
+      return jsonResponse(createSession(parsePayload(e)), e);
     }
 
     const sessionId = segments[2];
@@ -176,51 +473,55 @@ function handlePost(segments, e) {
     const payload = parsePayload(e);
 
     if (action === "heartbeat") {
-      return jsonResponse(recordHeartbeat(sessionId));
+      return jsonResponse(recordHeartbeat(sessionId), e);
     }
     if (action === "attempt") {
-      return jsonResponse(recordAttempt(sessionId, payload));
+      return jsonResponse(recordAttempt(sessionId, payload), e);
     }
     if (action === "complete") {
-      return jsonResponse(completeSession(sessionId, payload));
+      return jsonResponse(completeSession(sessionId, payload), e);
     }
     if (action === "leave") {
-      return jsonResponse(markSessionLeft(sessionId));
+      return jsonResponse(markSessionLeft(sessionId), e);
     }
   }
 
-  return jsonResponse({ error: "Not found" });
+  return jsonResponse({ error: "Not found" }, e);
 }
 
 function createSession(payload) {
-  const sheet = getSheet(SHEET_NAMES.sessions);
-  const now = new Date();
-  const iso = now.toISOString();
-  const id = payload && payload.id ? String(payload.id).trim() : Utilities.getUuid();
-  const name = payload && payload.name ? String(payload.name) : "";
+  return withLock(function () {
+    const now = new Date();
+    const iso = now.toISOString();
+    const id = payload && payload.id ? String(payload.id).trim() : Utilities.getUuid();
+    const name = payload && payload.name ? String(payload.name) : "";
 
-  const row = [
-    now,
-    id,
-    name,
-    "active",
-    iso,
-    iso,
-    "",
-    ""
-  ];
+    const sessionRecord = {
+      timestamp: now,
+      sessionId: id,
+      name,
+      status: "active",
+      startTime: iso,
+      lastSeen: iso,
+      summary: "",
+      endTime: ""
+    };
 
-  sheet
-    .getRange(sheet.getLastRow() + 1, 1, 1, HEADERS.sessions.length)
-    .setValues([row]);
+    TABLES.sessions.upsert(sessionRecord);
+    TABLES.heartbeats.append({
+      timestamp: now,
+      sessionId: id,
+      lastSeen: iso
+    });
 
-  return {
-    id,
-    name,
-    status: "active",
-    startTime: iso,
-    lastSeen: iso
-  };
+    return {
+      id,
+      name,
+      status: "active",
+      startTime: iso,
+      lastSeen: iso
+    };
+  });
 }
 
 function recordHeartbeat(sessionId) {
@@ -228,29 +529,33 @@ function recordHeartbeat(sessionId) {
     return { error: "sessionId ontbreekt" };
   }
 
-  const sheet = getSheet(SHEET_NAMES.sessions);
-  const record = getSessionRow(sheet, sessionId);
-  const now = new Date();
-  const iso = now.toISOString();
+  return withLock(function () {
+    const existing = TABLES.sessions.getByKey(sessionId);
+    const now = new Date();
+    const iso = now.toISOString();
+    const record = existing ? existing.record : {};
+    const status = record.status === "completed" ? "completed" : "active";
 
-  const values = record ? record.values.slice() : new Array(HEADERS.sessions.length).fill("");
-  values[SESSION_COLS.timestamp] = now;
-  values[SESSION_COLS.id] = sessionId;
-  values[SESSION_COLS.status] = values[SESSION_COLS.status] === "completed" ? "completed" : "active";
-  values[SESSION_COLS.lastSeen] = iso;
-  if (!values[SESSION_COLS.startTime]) {
-    values[SESSION_COLS.startTime] = iso;
-  }
+    const updated = {
+      timestamp: now,
+      sessionId,
+      name: record.name || "",
+      status,
+      startTime: record.startTime || iso,
+      lastSeen: iso,
+      summary: record.summary || "",
+      endTime: record.endTime || ""
+    };
 
-  const rowIndex = record ? record.row : sheet.getLastRow() + 1;
-  sheet.getRange(rowIndex, 1, 1, HEADERS.sessions.length).setValues([values]);
+    TABLES.sessions.upsert(updated);
+    TABLES.heartbeats.append({
+      timestamp: now,
+      sessionId,
+      lastSeen: iso
+    });
 
-  const heartbeatSheet = getSheet(SHEET_NAMES.heartbeats);
-  heartbeatSheet
-    .getRange(heartbeatSheet.getLastRow() + 1, 1, 1, HEADERS.heartbeats.length)
-    .setValues([[now, sessionId, iso]]);
-
-  return { lastSeen: iso };
+    return { lastSeen: iso };
+  });
 }
 
 function recordAttempt(sessionId, payload) {
@@ -258,42 +563,41 @@ function recordAttempt(sessionId, payload) {
     return { error: "sessionId ontbreekt" };
   }
 
-  const sheet = getSheet(SHEET_NAMES.sessions);
-  const record = getSessionRow(sheet, sessionId);
-  if (record) {
+  return withLock(function () {
+    const existing = TABLES.sessions.getByKey(sessionId);
     const now = new Date();
     const iso = now.toISOString();
-    const values = record.values.slice();
-    values[SESSION_COLS.timestamp] = now;
-    values[SESSION_COLS.lastSeen] = iso;
-    values[SESSION_COLS.status] = values[SESSION_COLS.status] === "completed" ? "completed" : "active";
-    sheet
-      .getRange(record.row, 1, 1, HEADERS.sessions.length)
-      .setValues([values]);
-  }
+    const record = existing ? existing.record : {};
 
-  const attemptSheet = getSheet(SHEET_NAMES.attempts);
-  const now = new Date();
-  const iso = now.toISOString();
-  const selected = payload && Array.isArray(payload.selectedOptionIds)
-    ? payload.selectedOptionIds
-    : [];
+    const updated = {
+      timestamp: now,
+      sessionId,
+      name: record.name || "",
+      status: record.status === "completed" ? "completed" : "active",
+      startTime: record.startTime || iso,
+      lastSeen: iso,
+      summary: record.summary || "",
+      endTime: record.endTime || ""
+    };
 
-  const row = [
-    now,
-    sessionId,
-    payload && payload.moduleId ? String(payload.moduleId) : "",
-    payload && payload.questionId ? String(payload.questionId) : "",
-    JSON.stringify(selected),
-    payload && payload.isCorrect ? 1 : 0,
-    JSON.stringify(payload || {})
-  ];
+    TABLES.sessions.upsert(updated);
 
-  attemptSheet
-    .getRange(attemptSheet.getLastRow() + 1, 1, 1, HEADERS.attempts.length)
-    .setValues([row]);
+    const selected = payload && Array.isArray(payload.selectedOptionIds)
+      ? payload.selectedOptionIds
+      : [];
 
-  return {};
+    TABLES.attempts.append({
+      timestamp: now,
+      sessionId,
+      moduleId: payload && payload.moduleId ? String(payload.moduleId) : "",
+      questionId: payload && payload.questionId ? String(payload.questionId) : "",
+      selectedOptionIds: JSON.stringify(selected),
+      isCorrect: payload && payload.isCorrect ? 1 : 0,
+      rawPayload: JSON.stringify(payload || {})
+    });
+
+    return {};
+  });
 }
 
 function completeSession(sessionId, payload) {
@@ -301,32 +605,34 @@ function completeSession(sessionId, payload) {
     return { error: "sessionId ontbreekt" };
   }
 
-  const sheet = getSheet(SHEET_NAMES.sessions);
-  const record = getSessionRow(sheet, sessionId);
-  const now = new Date();
-  const iso = now.toISOString();
-  const summary = payload && payload.summary ? JSON.stringify(payload.summary) : "";
+  return withLock(function () {
+    const existing = TABLES.sessions.getByKey(sessionId);
+    const now = new Date();
+    const iso = now.toISOString();
+    const record = existing ? existing.record : {};
+    const summary = payload && payload.summary ? JSON.stringify(payload.summary) : "";
 
-  const values = record ? record.values.slice() : new Array(HEADERS.sessions.length).fill("");
-  values[SESSION_COLS.timestamp] = now;
-  values[SESSION_COLS.id] = sessionId;
-  values[SESSION_COLS.status] = "completed";
-  if (!values[SESSION_COLS.startTime]) {
-    values[SESSION_COLS.startTime] = iso;
-  }
-  values[SESSION_COLS.lastSeen] = iso;
-  values[SESSION_COLS.summary] = summary;
-  values[SESSION_COLS.endTime] = iso;
+    const updated = {
+      timestamp: now,
+      sessionId,
+      name: record.name || "",
+      status: "completed",
+      startTime: record.startTime || iso,
+      lastSeen: iso,
+      summary,
+      endTime: iso
+    };
 
-  const rowIndex = record ? record.row : sheet.getLastRow() + 1;
-  sheet.getRange(rowIndex, 1, 1, HEADERS.sessions.length).setValues([values]);
+    TABLES.sessions.upsert(updated);
+    TABLES.completions.append({
+      timestamp: now,
+      sessionId,
+      endTime: iso,
+      summary
+    });
 
-  const completionSheet = getSheet(SHEET_NAMES.completions);
-  completionSheet
-    .getRange(completionSheet.getLastRow() + 1, 1, 1, HEADERS.completions.length)
-    .setValues([[now, sessionId, iso, summary]]);
-
-  return { endTime: iso };
+    return { endTime: iso };
+  });
 }
 
 function markSessionLeft(sessionId) {
@@ -334,47 +640,28 @@ function markSessionLeft(sessionId) {
     return { error: "sessionId ontbreekt" };
   }
 
-  const sheet = getSheet(SHEET_NAMES.sessions);
-  const record = getSessionRow(sheet, sessionId);
-  const now = new Date();
-  const iso = now.toISOString();
+  return withLock(function () {
+    const existing = TABLES.sessions.getByKey(sessionId);
+    const now = new Date();
+    const iso = now.toISOString();
+    const record = existing ? existing.record : {};
+    const isCompleted = record.status === "completed";
 
-  const values = record ? record.values.slice() : new Array(HEADERS.sessions.length).fill("");
-  values[SESSION_COLS.timestamp] = now;
-  values[SESSION_COLS.id] = sessionId;
-  const isCompleted = values[SESSION_COLS.status] === "completed";
-  values[SESSION_COLS.status] = isCompleted ? "completed" : "inactive";
-  if (!values[SESSION_COLS.startTime]) {
-    values[SESSION_COLS.startTime] = iso;
-  }
-  values[SESSION_COLS.lastSeen] = iso;
-  if (!values[SESSION_COLS.endTime]) {
-    values[SESSION_COLS.endTime] = iso;
-  }
+    const updated = {
+      timestamp: now,
+      sessionId,
+      name: record.name || "",
+      status: isCompleted ? "completed" : "inactive",
+      startTime: record.startTime || iso,
+      lastSeen: iso,
+      summary: record.summary || "",
+      endTime: isCompleted ? record.endTime || iso : iso
+    };
 
-  const rowIndex = record ? record.row : sheet.getLastRow() + 1;
-  sheet.getRange(rowIndex, 1, 1, HEADERS.sessions.length).setValues([values]);
+    TABLES.sessions.upsert(updated);
 
-  return {};
-}
-
-function getSessionRow(sheet, sessionId) {
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) {
-    return null;
-  }
-
-  const range = sheet.getRange(2, 1, lastRow - 1, HEADERS.sessions.length);
-  const values = range.getValues();
-  for (let index = 0; index < values.length; index += 1) {
-    if (String(values[index][SESSION_COLS.id]) === sessionId) {
-      return {
-        row: index + 2,
-        values: values[index]
-      };
-    }
-  }
-  return null;
+    return {};
+  });
 }
 
 function buildDashboardSnapshot() {
@@ -450,30 +737,23 @@ function buildDashboardSnapshot() {
 }
 
 function readSessionRecords() {
-  const sheet = getSheet(SHEET_NAMES.sessions);
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) {
-    return [];
-  }
-
-  const range = sheet.getRange(2, 1, lastRow - 1, HEADERS.sessions.length);
-  const values = range.getValues();
-
-  return values
-    .map((row) => {
-      const id = String(row[SESSION_COLS.id] || "").trim();
+  return TABLES.sessions.getAll()
+    .map(function (record) {
+      const id = String(record.sessionId || "").trim();
       if (!id) {
         return null;
       }
       return {
         id,
-        name: String(row[SESSION_COLS.name] || ""),
-        status: String(row[SESSION_COLS.status] || ""),
-        startTime: normalizeIso(row[SESSION_COLS.startTime]),
-        lastSeen: normalizeIso(row[SESSION_COLS.lastSeen])
+        name: String(record.name || ""),
+        status: String(record.status || ""),
+        startTime: normalizeIso(record.startTime),
+        lastSeen: normalizeIso(record.lastSeen)
       };
     })
-    .filter(Boolean);
+    .filter(function (record) {
+      return Boolean(record);
+    });
 }
 
 function readAttemptStats(validSessionIds) {
@@ -482,21 +762,13 @@ function readAttemptStats(validSessionIds) {
     return stats;
   }
 
-  const sheet = getSheet(SHEET_NAMES.attempts);
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) {
-    return stats;
-  }
-
-  const range = sheet.getRange(2, 1, lastRow - 1, HEADERS.attempts.length);
-  const values = range.getValues();
-
-  values.forEach((row) => {
-    const sessionId = String(row[ATTEMPT_COLS.sessionId] || "").trim();
+  const attempts = TABLES.attempts.getAll();
+  attempts.forEach(function (attempt) {
+    const sessionId = String(attempt.sessionId || "").trim();
     if (!sessionId || !validSessionIds.has(sessionId)) {
       return;
     }
-    const isCorrect = parseBoolean(row[ATTEMPT_COLS.isCorrect]);
+    const isCorrect = parseBoolean(attempt.isCorrect);
     const current = stats.get(sessionId) || { correct: 0, incorrect: 0 };
     if (isCorrect) {
       current.correct += 1;
