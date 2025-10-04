@@ -322,8 +322,8 @@ function doPost(e) {
 }
 
 /** Entry point for OPTIONS (CORS preflight) requests */
-function doOptions() {
-  return jsonResponse({});
+function doOptions(e) {
+  return emptyResponse(e);
 }
 
 function handleRequest(method, e) {
@@ -333,17 +333,17 @@ function handleRequest(method, e) {
     const segments = path ? path.split("/").filter(Boolean) : [];
 
     if (method === "GET") {
-      return handleGet(segments);
+      return handleGet(segments, e);
     }
 
     if (method === "POST") {
       return handlePost(segments, e);
     }
 
-    return jsonResponse({ error: "Method not supported" });
+    return jsonResponse({ error: "Method not supported" }, e);
   } catch (error) {
     console.error(error);
-    return jsonResponse({ error: error.message || "Unexpected error" });
+    return jsonResponse({ error: error.message || "Unexpected error" }, e);
   }
 }
 
@@ -368,9 +368,66 @@ function parsePayload(e) {
   }
 }
 
-function jsonResponse(body) {
+function jsonResponse(body, request) {
   const payload = JSON.stringify(body || {});
-  return ContentService.createTextOutput(payload).setMimeType(ContentService.MimeType.JSON);
+  const output = ContentService.createTextOutput(payload).setMimeType(ContentService.MimeType.JSON);
+  return applyCors(output, request);
+}
+
+function emptyResponse(request) {
+  const output = ContentService.createTextOutput("").setMimeType(ContentService.MimeType.TEXT);
+  return applyCors(output, request);
+}
+
+function applyCors(output, request) {
+  const headers = buildCorsHeaders(request);
+
+  if (!headers) {
+    return output;
+  }
+
+  if (output && typeof output.setHeaders === "function") {
+    output.setHeaders(headers);
+    return output;
+  }
+
+  if (output && typeof output.setHeader === "function") {
+    Object.keys(headers).forEach(function (key) {
+      output.setHeader(key, headers[key]);
+    });
+    return output;
+  }
+
+  if (output && typeof output.addHeader === "function") {
+    Object.keys(headers).forEach(function (key) {
+      output.addHeader(key, headers[key]);
+    });
+  }
+
+  return output;
+}
+
+const ALLOWED_ORIGINS = ["https://3dindeklas.github.io", "https://3dindeklas.nl", "*"];
+
+function buildCorsHeaders(request) {
+  var requestedOrigin = null;
+
+  if (request && request.parameter && request.parameter.origin) {
+    requestedOrigin = String(request.parameter.origin);
+  }
+
+  var allowedOrigin = "*";
+
+  if (requestedOrigin && ALLOWED_ORIGINS.indexOf(requestedOrigin) !== -1 && requestedOrigin !== "*") {
+    allowedOrigin = requestedOrigin;
+  }
+
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "3600",
+  };
 }
 
 function getSpreadsheet() {
@@ -395,17 +452,17 @@ function ensureSheets() {
   });
 }
 
-function handleGet(segments) {
+function handleGet(segments, request) {
   if (segments.length === 2 && segments[0] === "api" && segments[1] === "dashboard") {
-    return jsonResponse(buildDashboardSnapshot());
+    return jsonResponse(buildDashboardSnapshot(), request);
   }
-  return jsonResponse({ error: "Not found" });
+  return jsonResponse({ error: "Not found" }, request);
 }
 
 function handlePost(segments, e) {
   if (segments.length >= 2 && segments[0] === "api" && segments[1] === "sessions") {
     if (segments.length === 2) {
-      return jsonResponse(createSession(parsePayload(e)));
+      return jsonResponse(createSession(parsePayload(e)), e);
     }
 
     const sessionId = segments[2];
@@ -413,20 +470,20 @@ function handlePost(segments, e) {
     const payload = parsePayload(e);
 
     if (action === "heartbeat") {
-      return jsonResponse(recordHeartbeat(sessionId));
+      return jsonResponse(recordHeartbeat(sessionId), e);
     }
     if (action === "attempt") {
-      return jsonResponse(recordAttempt(sessionId, payload));
+      return jsonResponse(recordAttempt(sessionId, payload), e);
     }
     if (action === "complete") {
-      return jsonResponse(completeSession(sessionId, payload));
+      return jsonResponse(completeSession(sessionId, payload), e);
     }
     if (action === "leave") {
-      return jsonResponse(markSessionLeft(sessionId));
+      return jsonResponse(markSessionLeft(sessionId), e);
     }
   }
 
-  return jsonResponse({ error: "Not found" });
+  return jsonResponse({ error: "Not found" }, e);
 }
 
 function createSession(payload) {
