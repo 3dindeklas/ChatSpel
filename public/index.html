@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Digitaal Veiligheidsrijbewijs</title>
+    <link rel="stylesheet" href="../styles/digitalSafetyQuiz.css" />
+  </head>
+  <body>
+    <div id="quiz"></div>
+
+    <script src="../src/digitalSafetyQuiz.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        new DigitalSafetyQuiz({
+          container: "#quiz"
+        });
+      });
+    </script>
+  </body>
+</html>
