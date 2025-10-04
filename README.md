@@ -42,6 +42,9 @@ Ga naar [http://localhost:3000/questions.html](http://localhost:3000/questions.h
 />
 <script src="https://jouw-domein.nl/path/to/digitalSafetyQuiz.js"></script>
 <script>
+  window.__CHAT_SPEL_SESSION_API_BASE_URL__ =
+    "https://script.google.com/macros/s/JE-GEDEPLOYEDE-ID/exec";
+
   document.addEventListener("DOMContentLoaded", function () {
     new DigitalSafetyQuiz({
       container: "#quiz"
@@ -80,3 +83,19 @@ Let op: voor de downloadknop van het certificaat heb je de bibliotheek [`html2ca
 ```
 
 Veel succes met het digitale veiligheidsrijbewijs!
+
+## Sessies opslaan in Google Sheets
+
+Gebruik het Google Apps Script in [`docs/google-apps-script-session-mirror.gs`](docs/google-apps-script-session-mirror.gs) om
+sessiegegevens rechtstreeks in een Google Sheet te bewaren. Het script implementeert dezelfde routes als de Node-server
+(`POST /api/sessions`, `POST /api/sessions/:id/heartbeat`, `POST /api/sessions/:id/attempt`, `POST /api/sessions/:id/complete`,
+`POST /api/sessions/:id/leave` en `GET /api/dashboard`) en werkt zonder bijkomende configuratie zodra je het hebt gedeployed
+als web-app.
+
+1. Maak een nieuw Apps Script-project aan en plak de code uit het hierboven genoemde bestand in de editor.
+2. Vul je Spreadsheet-ID in en deploy het project als web-app met toegang voor iedereen met de link.
+3. Configureer je website door vóór het initialiseren van de quiz `window.__CHAT_SPEL_SESSION_API_BASE_URL__` te zetten naar de
+   URL van de web-app (zie voorbeeld hierboven). Zowel de quiz als het dashboard sturen hun sessieaanroepen automatisch naar dit
+   adres.
+4. Controleer het Google Sheet: nieuwe sessies, heartbeats, pogingen en afrondingen verschijnen direct zodat je dashboards kunt
+   opbouwen zonder de Node-server.

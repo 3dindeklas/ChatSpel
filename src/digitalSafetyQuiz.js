@@ -255,6 +255,27 @@
     return sanitizedPath;
   }
 
+  function isCrossOriginUrl(url) {
+    if (!url || typeof url !== "string") {
+      return false;
+    }
+
+    if (url.startsWith("/")) {
+      return false;
+    }
+
+    try {
+      if (typeof window === "undefined") {
+        return false;
+      }
+
+      const parsed = new URL(url, window.location.href);
+      return parsed.origin !== window.location.origin;
+    } catch (error) {
+      return false;
+    }
+  }
+
   function shuffleArray(input = []) {
     const array = Array.isArray(input) ? [...input] : [];
     for (let i = array.length - 1; i > 0; i -= 1) {
@@ -359,6 +380,7 @@
 
       try {
         const url = this._buildUrl(path);
+        const crossOrigin = isCrossOriginUrl(url);
         const fetchOptions = {
           method: options.method || "GET",
           credentials: "same-origin",
@@ -367,7 +389,9 @@
 
         const headers = { ...(options.headers || {}) };
         if (options.body !== undefined && !headers["Content-Type"]) {
-          headers["Content-Type"] = "application/json";
+          headers["Content-Type"] = crossOrigin
+            ? "text/plain;charset=utf-8"
+            : "application/json";
         }
 
         if (Object.keys(headers).length) {
@@ -376,6 +400,10 @@
 
         if (options.body !== undefined) {
           fetchOptions.body = options.body;
+        }
+
+        if (crossOrigin) {
+          fetchOptions.mode = "cors";
         }
 
         const response = await fetch(url, fetchOptions);
