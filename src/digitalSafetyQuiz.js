@@ -124,6 +124,7 @@
       nextModule: "Volgende module",
       continue: "Ga verder",
       checkAnswer: "Controleer antwoord",
+      nextQuestion: "Volgende vraag",
       selectOptions: "Selecteer je antwoord", 
       selectMultiple: "Selecteer een of meer antwoorden",
       feedbackCorrect: "Goed gedaan!",
@@ -775,12 +776,25 @@
         form.append(wrapper);
       });
 
-      const feedbackEl = createElement("div", { className: "dsq-feedback" });
+      const feedbackEl = createElement("div", {
+        className: "dsq-feedback",
+        attrs: { "aria-live": "polite", role: "status" }
+      });
       const button = createElement("button", {
         className: "dsq-button",
         text: this.config.strings.checkAnswer,
         attrs: { type: "submit" }
       });
+      form.append(button);
+
+      const nextQuestionButton = createElement("button", {
+        className: "dsq-button dsq-button-secondary",
+        text: this.config.strings.nextQuestion,
+        attrs: { type: "button" }
+      });
+      nextQuestionButton.disabled = true;
+
+      let hasRecordedScore = false;
 
       form.addEventListener("submit", (event) => {
         event.preventDefault();
@@ -808,34 +822,47 @@
         const isCorrect = this.evaluateAnswer(question, answers);
         this.handleQuestionAttempt(module, question, answers, isCorrect);
 
-        if (isCorrect) {
-          this.score += 1;
-        }
-
-        form.classList.add("dsq-question-locked");
-        button.disabled = true;
-        form.querySelectorAll("input").forEach((input) => {
-          input.disabled = true;
-        });
-
         feedbackEl.textContent = isCorrect
           ? question.feedback?.correct || this.config.strings.feedbackCorrect
           : question.feedback?.incorrect || this.config.strings.feedbackIncorrect;
 
-        feedbackEl.classList.remove("dsq-feedback-correct", "dsq-feedback-incorrect");
+        feedbackEl.classList.remove(
+          "dsq-feedback-correct",
+          "dsq-feedback-incorrect"
+        );
         feedbackEl.classList.add(
           isCorrect ? "dsq-feedback-correct" : "dsq-feedback-incorrect"
         );
 
-        setTimeout(() => {
-          this.currentQuestionIndex += 1;
-          this.renderQuestion();
-        }, 1200);
+        if (isCorrect) {
+          if (!hasRecordedScore) {
+            this.score += 1;
+            hasRecordedScore = true;
+          }
+
+          form.classList.add("dsq-question-locked");
+          button.disabled = true;
+          form.querySelectorAll("input").forEach((input) => {
+            input.disabled = true;
+          });
+
+          nextQuestionButton.disabled = false;
+          nextQuestionButton.focus();
+        }
       });
 
       questionCard.append(form, feedbackEl);
       this.mainEl.append(questionCard);
       this.footerEl.innerHTML = "";
+      nextQuestionButton.addEventListener("click", () => {
+        if (nextQuestionButton.disabled) {
+          return;
+        }
+
+        this.currentQuestionIndex += 1;
+        this.renderQuestion();
+      });
+      this.footerEl.append(nextQuestionButton);
 
       this.updateProgress();
     }
