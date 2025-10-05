@@ -8,16 +8,53 @@ Deze repository bevat een kant-en-klare quizmodule die je kunt insluiten op bijv
 - `styles/digitalSafetyQuiz.css` – Stijlen voor de quiz.
 - `public/index.html` – Voorbeeldpagina om de quiz lokaal te bekijken/testen.
 
-## Lokaal testen
+## Installatie & lokaal testen
 
-Installeer eerst de afhankelijkheden en start daarna de Node-server. De server levert de quizbestanden, API's en beheerschermen uit.
+1. Kopieer de repository naar je eigen machine en installeer de afhankelijkheden:
 
-```bash
-npm install
-npm start
-```
+   ```bash
+   npm install
+   ```
 
-Open vervolgens [http://localhost:3000/](http://localhost:3000/) in je browser om de quiz te bekijken. Het live dashboard is bereikbaar via `public/dashboard.html` en het beheer van vragen via `public/questions.html`.
+2. Maak optioneel een `.env`-bestand in de hoofdmap om lokale instellingen te overschrijven (zie [Configuratie](#configuratie)).
+
+3. Start de server:
+
+   ```bash
+   npm start
+   ```
+
+4. Open vervolgens [http://localhost:3000/](http://localhost:3000/) in je browser om de quiz te bekijken. Het live dashboard is bereikbaar via `public/dashboard.html` en het beheer van vragen via `public/questions.html`.
+
+Tijdens ontwikkeling kun je ook `npm run dev` gebruiken voor automatische herstart bij codewijzigingen.
+
+## Configuratie
+
+De server leest instellingen uit environment-variabelen. Plaats ze lokaal in een `.env`-bestand en configureer ze op Render via het **Environment**-tabblad.
+
+| Variabele | Beschrijving | Standaard |
+| --- | --- | --- |
+| `PORT` | Poort waarop de server draait. | `3000` |
+| `DATABASE_URL` | Connection string naar een externe PostgreSQL-database (bijvoorbeeld Render). Als deze waarde is gezet, gebruikt de app PostgreSQL in plaats van de meegeleverde SQLite-database. | *(niet gezet)* |
+| `DATABASE_SSL` | Zet deze op `false` om SSL uit te schakelen voor PostgreSQL. Laat leeg (of `true`) om SSL te gebruiken; Render vereist dit meestal. | `true` |
+| `SQLITE_DATABASE_PATH` | Pad naar een alternatief SQLite-bestand als je geen PostgreSQL gebruikt. | `data/quiz.db` |
+| `SESSION_TIMEOUT_MS` | Bepaalt hoe lang een sessie actief blijft zonder hartslag (dashboard). | `60000` |
+
+### Verbinding maken met een Render-database
+
+1. Maak in Render een **PostgreSQL**-database aan en kopieer de `External Database URL`.
+2. Voeg in de Render-service van deze app de volgende environment-variabelen toe:
+
+   ```
+   DATABASE_URL=postgres://gebruikersnaam:password@host:port/dbname?sslmode=require
+   DATABASE_SSL=true
+   ```
+
+   Laat `DATABASE_SSL` op `true` staan om het zelfondertekende certificaat van Render te accepteren. Pas de waarde alleen aan als je een eigen certificaat beheert.
+
+3. Deploy de service opnieuw. Bij de eerste start wordt de database automatisch voorzien van de tabellen en de standaard quizinhoud vanuit `data/quizData.json`.
+
+Wil je lokaal dezelfde Render-database gebruiken? Maak dan een `.env`-bestand met dezelfde `DATABASE_URL` en `DATABASE_SSL=true`.
 
 ### Vragen beheren
 

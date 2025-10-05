@@ -96,7 +96,7 @@ async function createSchema() {
 
   await runQuery(`
     CREATE TABLE IF NOT EXISTS session_attempts (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id TEXT PRIMARY KEY,
       session_id TEXT NOT NULL,
       module_id TEXT,
       question_id TEXT,
@@ -234,10 +234,9 @@ async function getQuizConfig() {
   const questionIds = questions.map((question) => question.id);
   let options = [];
   if (questionIds.length) {
+    const placeholderList = questionIds.map(() => "?").join(",");
     options = await allQuery(
-      `SELECT * FROM options WHERE question_id IN (${questionIds
-        .map(() => "?")
-        .join(",")}) ORDER BY position ASC`,
+      `SELECT * FROM options WHERE question_id IN (${placeholderList}) ORDER BY position ASC`,
       questionIds
     );
   }

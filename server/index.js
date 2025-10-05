@@ -304,10 +304,12 @@ app.post(
       req.body || {};
 
     const now = new Date().toISOString();
+    const attemptId = randomUUID();
     await runQuery(
-      `INSERT INTO session_attempts (session_id, module_id, question_id, selected_options, is_correct, answered_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO session_attempts (id, session_id, module_id, question_id, selected_options, is_correct, answered_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
+        attemptId,
         id,
         moduleId || null,
         questionId || null,
