@@ -15,6 +15,8 @@ function mapPlaceholders(query = "") {
   });
 }
 
+let database;
+
 if (shouldUsePostgres) {
   const shouldUseSSL = process.env.DATABASE_SSL !== "false";
   const pool = new Pool({
@@ -22,7 +24,7 @@ if (shouldUsePostgres) {
     ssl: shouldUseSSL ? { rejectUnauthorized: false } : undefined
   });
 
-  module.exports = {
+  database = {
     isPostgres: true,
     run(query, params = [], callback = () => {}) {
       pool
@@ -52,18 +54,19 @@ if (shouldUsePostgres) {
         .catch((error) => callback(error));
     }
   };
+} else {
+  const dbPath = process.env.SQLITE_DATABASE_PATH
+    ? path.resolve(process.env.SQLITE_DATABASE_PATH)
+    : path.join(__dirname, "..", "data", "quiz.db");
+
+  const sqliteDb = new sqlite3.Database(dbPath);
+
+  sqliteDb.serialize(() => {
+    sqliteDb.run("PRAGMA foreign_keys = ON");
+  });
+
+  sqliteDb.isPostgres = false;
+  database = sqliteDb;
 }
 
-const dbPath = process.env.SQLITE_DATABASE_PATH
-  ? path.resolve(process.env.SQLITE_DATABASE_PATH)
-  : path.join(__dirname, "..", "data", "quiz.db");
-
-const sqliteDb = new sqlite3.Database(dbPath);
-
-sqliteDb.serialize(() => {
-  sqliteDb.run("PRAGMA foreign_keys = ON");
-});
-
-sqliteDb.isPostgres = false;
-
-module.exports = sqliteDb;
+module.exports = database;
