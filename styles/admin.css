@@ -9,17 +9,11 @@ body {
 .admin-container {
   max-width: 960px;
   margin: 3rem auto;
-  padding: 2.5rem 2.5rem 4rem;
-  background: rgba(248, 250, 252, 0.92);
-  backdrop-filter: blur(12px);
-  border-radius: 28px;
-  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.35);
 }
 
 @media (max-width: 900px) {
   .admin-container {
     margin: 2.5rem 1.75rem;
-    padding: 2rem 2rem 3.5rem;
   }
 }
 
@@ -279,7 +273,6 @@ body {
 @media (max-width: 640px) {
   .admin-container {
     margin: 1.75rem 1rem;
-    padding: 1.75rem 1.5rem 3rem;
   }
 
   .admin-option {
