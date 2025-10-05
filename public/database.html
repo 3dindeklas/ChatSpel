@@ -4,19 +4,46 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Databaseoverzicht</title>
+    <link rel="stylesheet" href="../styles/admin.css" />
     <link rel="stylesheet" href="../styles/digitalSafetyQuiz.css" />
   </head>
-  <body class="dsq-dashboard-page">
-    <div class="dsq-dashboard-wrapper">
-      <section class="dsq-card">
-        <h1>Databaseoverzicht</h1>
+  <body data-admin-page="database">
+    <main class="admin-container">
+      <header class="admin-header">
+        <div class="admin-title-group">
+          <div class="admin-menu-wrapper">
+            <button
+              class="admin-menu-toggle"
+              type="button"
+              aria-label="Open navigatie"
+              aria-expanded="false"
+              aria-controls="admin-menu"
+            >
+              <span class="sr-only">Open navigatie</span>
+              <span class="admin-menu-bar"></span>
+              <span class="admin-menu-bar"></span>
+              <span class="admin-menu-bar"></span>
+            </button>
+            <nav class="admin-menu-dropdown" id="admin-menu" hidden>
+              <a class="admin-menu-link" href="database.html" data-page="database">Database</a>
+              <a class="admin-menu-link" href="categories.html" data-page="categories">Categorieën</a>
+              <a class="admin-menu-link" href="questions.html" data-page="questions">Vragen</a>
+              <a class="admin-menu-link" href="dashboard.html" data-page="dashboard">Live dashboard</a>
+            </nav>
+          </div>
+          <h1>Databaseoverzicht</h1>
+        </div>
+      </header>
+
+      <section class="admin-card">
         <p class="database-overview__intro">
           Hier zie je met welke database de applicatie verbonden is en hoeveel vragen er per categorie zijn opgeslagen.
         </p>
         <div id="database-overview" class="database-overview"></div>
       </section>
-    </div>
+    </main>
 
-    <script src="../src/databaseOverview.js"></script>
+    <script src="../src/adminMenu.js" defer></script>
+    <script src="../src/databaseOverview.js" defer></script>
   </body>
 </html>

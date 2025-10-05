@@ -44,6 +44,71 @@ function sanitizeOptions(options = []) {
     .filter((option) => option.label.trim().length > 0);
 }
 
+function normalizeBoolean(value, fallback) {
+  if (value === undefined || value === null) {
+    if (fallback === undefined) {
+      return false;
+    }
+    return Boolean(fallback);
+  }
+
+  if (typeof value === "string") {
+    const lowered = value.trim().toLowerCase();
+    if (["true", "1", "yes", "aan"].includes(lowered)) {
+      return true;
+    }
+    if (["false", "0", "no", "nee", "uit"].includes(lowered)) {
+      return false;
+    }
+  }
+
+  return Boolean(value);
+}
+
+function parseQuestionsPerSession(value, fallback) {
+  if (value === undefined || value === null || value === "") {
+    return fallback;
+  }
+
+  const numeric = Number.parseInt(value, 10);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return fallback;
+  }
+  return numeric;
+}
+
+function normalizeModuleRow(row) {
+  if (!row) {
+    return null;
+  }
+
+  const questionsPerSession = (() => {
+    const direct = row.questions_per_session ?? row.questionsPerSession;
+    const numeric = Number(direct);
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : 1;
+  })();
+
+  return {
+    id: row.id,
+    title: row.title,
+    questionsPerSession,
+    isActive:
+      row.isActive === true ||
+      row.is_active === 1 ||
+      row.is_active === true ||
+      row.isactive === 1
+  };
+}
+
+async function getNextModulePosition() {
+  const row = await getQuery(
+    "SELECT COALESCE(MAX(position), -1) AS maxPosition FROM modules"
+  );
+  const maxPosition =
+    row?.maxPosition ?? row?.max_position ?? row?.maxposition ?? -1;
+  return maxPosition + 1;
+}
+
 async function getModuleById(moduleId) {
   return getQuery("SELECT * FROM modules WHERE id = ?", [moduleId]);
 }
@@ -103,9 +168,107 @@ app.get(
   "/api/modules",
   asyncHandler(async (req, res) => {
     const modules = await allQuery(
-      "SELECT id, title, questions_per_session AS questionsPerSession FROM modules ORDER BY position ASC"
+      `SELECT id,
+              title,
+              questions_per_session AS questionsPerSession,
+              is_active AS isActive
+         FROM modules
+        ORDER BY position ASC`
     );
-    res.json(modules);
+    res.json(modules.map((module) => normalizeModuleRow(module)));
+  })
+);
+
+app.post(
+  "/api/modules",
+  asyncHandler(async (req, res) => {
+    const title = (req.body?.title || "").trim();
+    const questionsPerSession = parseQuestionsPerSession(
+      req.body?.questionsPerSession,
+      null
+    );
+    const isActive = normalizeBoolean(req.body?.isActive, true);
+
+    if (!title) {
+      res.status(400).json({ message: "Titel is verplicht" });
+      return;
+    }
+
+    if (!questionsPerSession) {
+      res.status(400).json({
+        message: "Vul een positief aantal vragen per sessie in"
+      });
+      return;
+    }
+
+    const position = await getNextModulePosition();
+    const moduleId = randomUUID();
+
+    await runQuery(
+      `INSERT INTO modules (id, title, intro, tips, questions_per_session, position, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        moduleId,
+        title,
+        "",
+        JSON.stringify([]),
+        questionsPerSession,
+        position,
+        isActive ? 1 : 0
+      ]
+    );
+
+    const created = await getModuleById(moduleId);
+    res.status(201).json(normalizeModuleRow(created));
+  })
+);
+
+app.put(
+  "/api/modules/:id",
+  asyncHandler(async (req, res) => {
+    const moduleId = req.params.id;
+    const existing = await getModuleById(moduleId);
+    if (!existing) {
+      res.status(404).json({ message: "Categorie niet gevonden" });
+      return;
+    }
+
+    const requestedTitle = typeof req.body?.title === "string"
+      ? req.body.title.trim()
+      : "";
+    const title = requestedTitle || existing.title || "";
+
+    if (!title) {
+      res.status(400).json({ message: "Titel is verplicht" });
+      return;
+    }
+
+    const questionsPerSession = parseQuestionsPerSession(
+      req.body?.questionsPerSession,
+      existing.questions_per_session
+    );
+
+    if (!questionsPerSession) {
+      res.status(400).json({
+        message: "Vul een positief aantal vragen per sessie in"
+      });
+      return;
+    }
+
+    const isActive = normalizeBoolean(
+      req.body?.isActive,
+      existing.is_active === 1 || existing.is_active === true
+    );
+
+    await runQuery(
+      `UPDATE modules
+       SET title = ?, questions_per_session = ?, is_active = ?
+       WHERE id = ?`,
+      [title, questionsPerSession, isActive ? 1 : 0, moduleId]
+    );
+
+    const updated = await getModuleById(moduleId);
+    res.json(normalizeModuleRow(updated));
   })
 );
 

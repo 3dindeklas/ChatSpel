@@ -54,9 +54,19 @@ async function createSchema() {
       intro TEXT,
       tips TEXT,
       questions_per_session INTEGER NOT NULL DEFAULT 0,
-      position INTEGER NOT NULL DEFAULT 0
+      position INTEGER NOT NULL DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1
     )
   `);
+
+  try {
+    await runQuery("ALTER TABLE modules ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1");
+  } catch (error) {
+    const message = String(error?.message || "").toLowerCase();
+    if (!message.includes("duplicate") && !message.includes("exists")) {
+      throw error;
+    }
+  }
 
   await runQuery(`
     CREATE TABLE IF NOT EXISTS questions (
@@ -277,6 +287,7 @@ async function getQuizConfig() {
     intro: module.intro,
     tips: JSON.parse(module.tips || "[]"),
     questionsPerSession: module.questions_per_session,
+    isActive: module.is_active === 1 || module.is_active === true,
     questionPool: questionMap[module.id] || []
   }));
 
@@ -285,7 +296,7 @@ async function getQuizConfig() {
     description: settings.description || "",
     certificateMessage: settings.certificateMessage || "",
     strings: settings.strings || {},
-    modules: normalizedModules
+    modules: normalizedModules.filter((module) => module.isActive)
   };
 }
 
