@@ -65,6 +65,33 @@ function normalizeBoolean(value, fallback) {
   return Boolean(value);
 }
 
+function extractQuestionsPerSessionField(source) {
+  if (!source || typeof source !== "object") {
+    return undefined;
+  }
+
+  const candidates = [
+    source.questionsPerSession,
+    source.questions_per_session,
+    source.questions,
+    source.questionspersession
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate === undefined || candidate === null || candidate === "") {
+      continue;
+    }
+
+    if (Array.isArray(candidate)) {
+      continue;
+    }
+
+    return candidate;
+  }
+
+  return undefined;
+}
+
 function parseQuestionsPerSession(value, fallback) {
   if (value === undefined || value === null || value === "") {
     return fallback;
@@ -88,15 +115,18 @@ function normalizeModuleRow(row) {
   }
 
   const questionsPerSession = (() => {
-    const direct = row.questions_per_session ?? row.questionsPerSession;
+    const direct = extractQuestionsPerSessionField(row);
     const numeric = Number(direct);
-    return Number.isFinite(numeric) && numeric > 0 ? numeric : 1;
+    return Number.isFinite(numeric) && numeric > 0
+      ? Math.floor(numeric)
+      : 1;
   })();
 
   return {
     id: row.id,
     title: row.title,
     questionsPerSession,
+    questions_per_session: questionsPerSession,
     isActive: (() => {
       const rawValue =
         row.isActive ?? row.is_active ?? row.isactive ?? row.active ?? null;
@@ -211,7 +241,7 @@ app.post(
   asyncHandler(async (req, res) => {
     const title = (req.body?.title || "").trim();
     const questionsPerSession = parseQuestionsPerSession(
-      req.body?.questionsPerSession,
+      extractQuestionsPerSessionField(req.body),
       null
     );
     const isActive = normalizeBoolean(req.body?.isActive, true);
@@ -270,9 +300,14 @@ app.put(
       return;
     }
 
+    const existingQuestionsPerSession = parseQuestionsPerSession(
+      extractQuestionsPerSessionField(existing),
+      1
+    );
+
     const questionsPerSession = parseQuestionsPerSession(
-      req.body?.questionsPerSession,
-      existing.questions_per_session
+      extractQuestionsPerSessionField(req.body),
+      existingQuestionsPerSession
     );
 
     if (!questionsPerSession) {

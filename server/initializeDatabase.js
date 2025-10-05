@@ -287,6 +287,7 @@ async function getQuizConfig() {
     intro: module.intro,
     tips: JSON.parse(module.tips || "[]"),
     questionsPerSession: module.questions_per_session,
+    questions_per_session: module.questions_per_session,
     isActive: module.is_active === 1 || module.is_active === true,
     questionPool: questionMap[module.id] || []
   }));
