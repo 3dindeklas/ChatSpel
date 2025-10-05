@@ -28,6 +28,18 @@
     return response.json();
   }
 
+  function normalizeQuestionCount(category) {
+    const rawCount =
+      category.questionCount ??
+      category.question_count ??
+      category.questioncount ??
+      0;
+    const numericCount = Number(rawCount);
+    return Number.isFinite(numericCount) && numericCount >= 0
+      ? numericCount
+      : 0;
+  }
+
   function renderCategories(container, categories, totalQuestions) {
     const section = createElement("section", {
       className: "database-overview__section"
@@ -53,7 +65,12 @@
     table.append(thead);
 
     const tbody = document.createElement("tbody");
-    categories.forEach((category) => {
+    const sanitizedCategories = categories.map((category) => ({
+      ...category,
+      questionCount: normalizeQuestionCount(category)
+    }));
+
+    sanitizedCategories.forEach((category) => {
       const row = document.createElement("tr");
       row.append(
         createElement("td", { text: category.title || "Onbekende categorie" }),
@@ -67,10 +84,21 @@
     table.append(tbody);
     section.append(table);
 
+    const aggregatedCategoryTotal = sanitizedCategories.reduce(
+      (sum, category) => sum + category.questionCount,
+      0
+    );
+
+    const numericTotal = Number(totalQuestions);
+    const displayTotal =
+      Number.isFinite(numericTotal) && numericTotal >= aggregatedCategoryTotal
+        ? numericTotal
+        : aggregatedCategoryTotal;
+
     section.append(
       createElement("p", {
         className: "database-overview__total",
-        text: `Totaal aantal vragen: ${totalQuestions}`
+        text: `Totaal aantal vragen: ${displayTotal}`
       })
     );
 
