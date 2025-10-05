@@ -261,9 +261,23 @@ body {
   border: 0;
 }
 
-.admin-secondary {
+.admin-button.admin-secondary {
   background: #f3f4f6;
   color: #1f2937;
+}
+
+.admin-button.admin-secondary:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.admin-button.admin-danger {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.admin-button.admin-danger:hover {
+  background: #b91c1c;
 }
 
 .admin-error {
