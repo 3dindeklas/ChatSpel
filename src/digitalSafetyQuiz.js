@@ -816,10 +816,6 @@
       this.container.innerHTML = "";
       this.container.classList.add("dsq-dashboard");
 
-      const title = createElement("h2", {
-        className: "dsq-dashboard-title",
-        text: "Live dashboard"
-      });
       const dateEl = createElement("p", {
         className: "dsq-dashboard-date"
       });
