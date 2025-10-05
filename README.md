@@ -72,7 +72,10 @@ Ga naar [http://localhost:3000/questions.html](http://localhost:3000/questions.h
   rel="stylesheet"
   href="https://jouw-domein.nl/path/to/digitalSafetyQuiz.css"
 />
-<script src="https://jouw-domein.nl/path/to/digitalSafetyQuiz.js"></script>
+<script
+  src="https://jouw-domein.nl/path/to/digitalSafetyQuiz.js"
+  data-api-base-url="https://jouw-backend.nl"
+></script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     new DigitalSafetyQuiz({
@@ -82,6 +85,22 @@ Ga naar [http://localhost:3000/questions.html](http://localhost:3000/questions.h
     });
   });
 </script>
+```
+
+De `data-api-base-url` geeft aan waar de server draait die de API aanbiedt (bijvoorbeeld
+een Render-service). Gebruik hierbij het domein of basispad waar de API beschikbaar is;
+de quiz voegt zelf `/api/...` toe aan de requests. Deze URL wordt automatisch gebruikt
+voor het versturen van heartbeat- en sessieverkeer, zodat het insluiten op een extern
+domein (zoals Wix) correct blijft werken. Je kunt het basispad ook op een later moment
+instellen via JavaScript:
+
+```html
+<script>
+  window.DigitalSafetyQuizDefaults = {
+    apiBaseUrl: "https://jouw-backend.nl"
+  };
+</script>
+<script src="https://jouw-domein.nl/path/to/digitalSafetyQuiz.js"></script>
 ```
 
 ### Configuratie aanpassen
