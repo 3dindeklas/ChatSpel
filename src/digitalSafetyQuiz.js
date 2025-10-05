@@ -46,6 +46,42 @@
     return el;
   }
 
+  function normalizeBaseUrl(input) {
+    if (typeof input !== "string") {
+      return "";
+    }
+
+    const trimmed = input.trim();
+    if (!trimmed || trimmed === "/") {
+      return "";
+    }
+
+    return trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
+  }
+
+  const globalDefaults = (() => {
+    const defaults = { ...(global.DigitalSafetyQuizDefaults || {}) };
+
+    if (typeof document !== "undefined") {
+      const currentScript = document.currentScript;
+      if (currentScript && currentScript.dataset) {
+        const { apiBaseUrl, configUrl } = currentScript.dataset;
+        if (apiBaseUrl) {
+          defaults.apiBaseUrl = apiBaseUrl;
+        }
+        if (configUrl) {
+          defaults.configUrl = configUrl;
+        }
+      }
+    }
+
+    if (defaults.apiBaseUrl) {
+      defaults.apiBaseUrl = normalizeBaseUrl(defaults.apiBaseUrl);
+    }
+
+    return defaults;
+  })();
+
   class IndexedDbAdapter {
     constructor(options = {}) {
       this.dbName = options.dbName || "DigitalSafetyQuizDB";
@@ -231,7 +267,11 @@
   class DailySessionStore {
     constructor(options = {}) {
       this.prefix = options.prefix || "digitalSafetyQuiz:sessions";
-      this.apiBaseUrl = options.apiBaseUrl || "";
+      const providedBaseUrl =
+        options.apiBaseUrl !== undefined
+          ? options.apiBaseUrl
+          : globalDefaults.apiBaseUrl;
+      this.apiBaseUrl = normalizeBaseUrl(providedBaseUrl || "");
       this.heartbeatIntervalMs = options.heartbeatIntervalMs || 15000;
       this.database = new IndexedDbAdapter();
       this.storageEnabled = this.database.isSupported;
@@ -287,11 +327,35 @@
     }
 
     _buildUrl(path = "") {
+      const base = this.apiBaseUrl || "";
       if (!path) {
-        return this.apiBaseUrl || "";
+        return base;
       }
-      const normalized = path.startsWith("/") ? path : `/${path}`;
-      return `${this.apiBaseUrl || ""}${normalized}`;
+
+      if (/^https?:\/\//i.test(path)) {
+        return path;
+      }
+
+      if (!base) {
+        return path.startsWith("/") ? path : `/${path}`;
+      }
+
+      const normalizedPath = path.startsWith("/")
+        ? path.slice(1)
+        : path;
+
+      if (/^https?:\/\//i.test(base)) {
+        try {
+          const baseUrl = base.endsWith("/") ? base : `${base}/`;
+          const url = new URL(normalizedPath, baseUrl);
+          return url.toString();
+        } catch (error) {
+          /* val terug op stringmanipulatie */
+        }
+      }
+
+      const sanitizedBase = base.endsWith("/") ? base.slice(0, -1) : base;
+      return `${sanitizedBase}/${normalizedPath}`;
     }
 
     async _sendRequest(path, options = {}) {
@@ -949,7 +1013,11 @@
 
   class DigitalSafetyQuiz {
     constructor(options = {}) {
-      this.apiBaseUrl = options.apiBaseUrl || "";
+      const providedApiBaseUrl =
+        options.apiBaseUrl !== undefined
+          ? options.apiBaseUrl
+          : globalDefaults.apiBaseUrl;
+      this.apiBaseUrl = normalizeBaseUrl(providedApiBaseUrl || "");
       this.config = normalizeConfig(options.config);
       this.container =
         typeof options.container === "string"
