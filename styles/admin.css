@@ -125,6 +125,7 @@ body {
   border-radius: 8px;
   text-decoration: none;
   font-weight: 600;
+  gap: 0.5rem;
   transition: background 0.2s ease;
 }
 
@@ -151,6 +152,29 @@ body {
 
 .admin-table tbody tr:hover {
   background: #f9fafb;
+}
+
+.admin-table__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.admin-button__icon {
+  display: inline-flex;
+  width: 1em;
+  height: 1em;
+  color: inherit;
+}
+
+.admin-button__icon svg {
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
+  display: block;
 }
 
 .admin-empty {
