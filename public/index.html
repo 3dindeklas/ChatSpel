@@ -13,7 +13,6 @@
       src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"
       defer
     ></script>
-    <script src="../src/googleSheetsConfigClient.js"></script>
     <script src="../src/digitalSafetyQuiz.js"></script>
     <script>
       document.addEventListener("DOMContentLoaded", async function () {
@@ -22,134 +21,21 @@
           container.textContent = "Quiz wordt geladen...";
         }
 
-        const pageBaseUrl = new URL("./", window.location.href);
-
-        const resolveAbsoluteUrl = (value) => {
-          if (!value || typeof value !== "string") {
-            return "";
-          }
-          const trimmed = value.trim();
-          if (!trimmed) {
-            return "";
-          }
-          try {
-            return new URL(trimmed, pageBaseUrl.href)
-              .toString()
-              .replace(/\/+$/, "");
-          } catch (error) {
-            return "";
-          }
-        };
-
-        const sheetOptions = {};
-        const sheetOptionMappings = [
-          ["sheetId", "__CHAT_SPEL_GOOGLE_SHEETS_ID__"],
-          ["defaultsSheet", "__CHAT_SPEL_GOOGLE_SHEETS_DEFAULTS_SHEET__"],
-          ["modulesSheet", "__CHAT_SPEL_GOOGLE_SHEETS_MODULES_SHEET__"],
-          ["questionsSheet", "__CHAT_SPEL_GOOGLE_SHEETS_QUESTIONS_SHEET__"],
-          ["optionsSheet", "__CHAT_SPEL_GOOGLE_SHEETS_OPTIONS_SHEET__"]
-        ];
-
-        sheetOptionMappings.forEach(([optionKey, globalKey]) => {
-          const value = window[globalKey];
-          if (typeof value === "string" && value.trim()) {
-            sheetOptions[optionKey] = value.trim();
-          }
-        });
-
-        if (
-          !window.__CHAT_SPEL_GOOGLE_SHEETS_ID__ &&
-          window.DSQGoogleSheets &&
-          window.DSQGoogleSheets.DEFAULT_SHEET_ID
-        ) {
-          window.__CHAT_SPEL_GOOGLE_SHEETS_ID__ =
-            window.DSQGoogleSheets.DEFAULT_SHEET_ID;
-        }
-
-        const loadConfigFromSheets = async () => {
-          if (
-            !window.DSQGoogleSheets ||
-            typeof window.DSQGoogleSheets.loadQuizConfig !== "function"
-          ) {
-            throw new Error("Google Sheets loader is niet beschikbaar");
-          }
-          return window.DSQGoogleSheets.loadQuizConfig(sheetOptions);
-        };
-
-        let config = null;
-        const loadErrors = [];
-
         try {
-          config = await loadConfigFromSheets();
-        } catch (error) {
-          loadErrors.push(error);
-        }
-
-        if (!config) {
-          if (container) {
-            container.textContent =
-              "De quiz kon niet worden geladen. Controleer je Google Sheet configuratie.";
+          const response = await fetch("/api/quiz-config");
+          if (!response.ok) {
+            throw new Error("Kon configuratie niet laden");
           }
-          if (window.console && typeof window.console.error === "function") {
-            loadErrors.forEach((error) => {
-              window.console.error("Kon quizconfiguratie niet laden", error);
-            });
-          }
-          return;
-        }
-
-        const resolvedSessionApiBaseUrl = resolveAbsoluteUrl(
-          window.__CHAT_SPEL_SESSION_API_BASE_URL__ || config.sessionApiBaseUrl
-        );
-
-        if (config.title && typeof document !== "undefined") {
-          document.title = String(config.title);
-        }
-
-        if (
-          config.description &&
-          typeof document !== "undefined" &&
-          document.head
-        ) {
-          const head = document.head;
-          let meta = head.querySelector("meta[name='description']");
-          if (!meta) {
-            meta = document.createElement("meta");
-            meta.setAttribute("name", "description");
-            head.appendChild(meta);
-          }
-          meta.setAttribute("content", String(config.description));
-        }
-
-        if (
-          !window.__CHAT_SPEL_SESSION_API_BASE_URL__ &&
-          resolvedSessionApiBaseUrl
-        ) {
-          window.__CHAT_SPEL_SESSION_API_BASE_URL__ = resolvedSessionApiBaseUrl;
-        }
-
-        if (!resolvedSessionApiBaseUrl && window.console) {
-          const { warn } = window.console;
-          if (typeof warn === "function") {
-            warn(
-              "DigitalSafetyQuiz: er is geen session API base URL ingesteld. Sessiedata wordt alleen lokaal in de browser opgeslagen."
-            );
-          }
-        }
-
-        try {
+          const config = await response.json();
           new DigitalSafetyQuiz({
             container: "#quiz",
             config,
-            apiBaseUrl: resolvedSessionApiBaseUrl
+            apiBaseUrl: ""
           });
         } catch (error) {
           if (container) {
             container.textContent =
-              "Er ging iets mis bij het tonen van de quiz. Probeer het later opnieuw.";
-          }
-          if (window.console && typeof window.console.error === "function") {
-            window.console.error("Kon de quiz niet initialiseren", error);
+              "De quiz kon niet worden geladen. Probeer het later opnieuw.";
           }
         }
       });

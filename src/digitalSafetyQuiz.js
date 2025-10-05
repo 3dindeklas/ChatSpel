@@ -1,33 +1,30 @@
 (function (global) {
   "use strict";
 
-  const STRING_KEYS = [
-    "startButton",
-    "nextModule",
-    "continue",
-    "checkAnswer",
-    "nextQuestion",
-    "selectOptions",
-    "selectMultiple",
-    "feedbackCorrect",
-    "feedbackIncorrect",
-    "moduleComplete",
-    "certificateTitle",
-    "enterName",
-    "downloadButton",
-    "resetButton"
-  ];
-
-  const GOOGLE_APPS_SCRIPT_HOST = "https://script.google.com";
-  const GOOGLE_APPS_SCRIPT_CONTENT_HOST_SUFFIX = ".googleusercontent.com";
-  const BRIDGE_REQUEST_TIMEOUT_MS = 20000;
-
-  function toText(value) {
-    if (value === null || typeof value === "undefined") {
-      return "";
+  const defaultConfig = {
+    title: "Digitaal Veiligheidsrijbewijs",
+    description:
+      "Doorloop de modules, beantwoord de vragen en verdien het certificaat voor digitale veiligheid!",
+    modules: [],
+    certificateMessage:
+      "Gefeliciteerd! Je hebt alle modules voltooid en toont dat jij veilig en slim online kunt zijn.",
+    strings: {
+      startButton: "Start de quiz",
+      nextModule: "Volgende module",
+      continue: "Ga verder",
+      checkAnswer: "Controleer antwoord",
+      nextQuestion: "Volgende vraag",
+      selectOptions: "Selecteer je antwoord",
+      selectMultiple: "Selecteer een of meer antwoorden",
+      feedbackCorrect: "Goed gedaan!",
+      feedbackIncorrect: "Probeer het nog eens.",
+      moduleComplete: "Module afgerond!",
+      certificateTitle: "Jouw digitale veiligheidsrijbewijs",
+      enterName: "Vul je naam in voor op het certificaat",
+      downloadButton: "Download als afbeelding",
+      resetButton: "Opnieuw beginnen"
     }
-    return String(value);
-  }
+  };
   function createElement(tag, options = {}) {
     const el = document.createElement(tag);
     if (options.className) {
@@ -201,115 +198,6 @@
     return `${basePrefix}${Date.now().toString(36)}-${randomPart}`;
   }
 
-  function stripTrailingPublicSegment(pathname) {
-    if (!pathname) {
-      return "";
-    }
-
-    const segments = String(pathname)
-      .split("/")
-      .filter(Boolean);
-
-    if (segments.length && segments[segments.length - 1] === "public") {
-      segments.pop();
-    }
-
-    if (!segments.length) {
-      return "";
-    }
-
-    return `/${segments.join("/")}`;
-  }
-
-  function sanitizeApiBaseUrl(value) {
-    if (!value || typeof value !== "string") {
-      return "";
-    }
-
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return "";
-    }
-
-    const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(trimmed);
-
-    if (isAbsolute) {
-      try {
-        const parsed = new URL(trimmed);
-        const sanitizedPath = stripTrailingPublicSegment(
-          parsed.pathname.replace(/\/+$/, "")
-        );
-        parsed.pathname = sanitizedPath || "/";
-        return parsed.toString().replace(/\/+$/, "");
-      } catch (error) {
-        return trimmed.replace(/\/+$/, "");
-      }
-    }
-
-    const normalized = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-    const sanitizedPath = stripTrailingPublicSegment(
-      normalized.replace(/\/+$/, "")
-    );
-
-    if (!sanitizedPath || sanitizedPath === "/") {
-      return "";
-    }
-
-    return sanitizedPath;
-  }
-
-  function isCrossOriginUrl(url) {
-    if (!url || typeof url !== "string") {
-      return false;
-    }
-
-    if (url.startsWith("/")) {
-      return false;
-    }
-
-    try {
-      if (typeof window === "undefined") {
-        return false;
-      }
-
-      const parsed = new URL(url, window.location.href);
-      return parsed.origin !== window.location.origin;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  function isTrustedBridgeOrigin(origin, requestUrl) {
-    if (!origin) {
-      return false;
-    }
-
-    const trimmed = String(origin).trim();
-    if (!trimmed) {
-      return false;
-    }
-
-    if (
-      trimmed === GOOGLE_APPS_SCRIPT_HOST ||
-      trimmed.endsWith(GOOGLE_APPS_SCRIPT_CONTENT_HOST_SUFFIX)
-    ) {
-      return true;
-    }
-
-    if (requestUrl && typeof window !== "undefined") {
-      try {
-        const parsed = new URL(requestUrl, window.location.href);
-        if (parsed.origin === trimmed) {
-          return true;
-        }
-      } catch (error) {
-        /* ignore */
-      }
-    }
-
-    return false;
-  }
-
   function shuffleArray(input = []) {
     const array = Array.isArray(input) ? [...input] : [];
     for (let i = array.length - 1; i > 0; i -= 1) {
@@ -339,32 +227,17 @@
   }
 
   const SESSION_EVENT_NAME = "dsq:sessions-updated";
-  const DASHBOARD_DEFAULT_REFRESH_INTERVAL = 15000;
 
   class DailySessionStore {
     constructor(options = {}) {
       this.prefix = options.prefix || "digitalSafetyQuiz:sessions";
-      this.apiBaseUrl = sanitizeApiBaseUrl(options.apiBaseUrl || "");
+      this.apiBaseUrl = options.apiBaseUrl || "";
       this.heartbeatIntervalMs = options.heartbeatIntervalMs || 15000;
-      this.remoteEnabled =
-        typeof fetch === "function" && Boolean(this.apiBaseUrl);
       this.database = new IndexedDbAdapter();
-      this._bridgeTimeoutMs =
-        typeof options.bridgeTimeoutMs === "number"
-          ? Math.max(options.bridgeTimeoutMs, 1000)
-          : BRIDGE_REQUEST_TIMEOUT_MS;
-
-      const persistencePreference = options.enableLocalPersistence;
-      if (persistencePreference === true) {
-        this.storageEnabled = this.database.isSupported;
-      } else if (persistencePreference === false) {
-        this.storageEnabled = false;
-      } else {
-        this.storageEnabled = this.database.isSupported && !this.remoteEnabled;
-      }
-
+      this.storageEnabled = this.database.isSupported;
       this.cache = {};
       this.sessionIndex = {};
+      this.remoteEnabled = typeof fetch === "function";
       this.remoteSnapshot = null;
       this._remotePollingTimer = null;
       this._heartbeatTimers = new Map();
@@ -428,20 +301,9 @@
 
       try {
         const url = this._buildUrl(path);
-        const method = (options.method || "GET").toUpperCase();
-        const crossOrigin = isCrossOriginUrl(url);
-
-        if (crossOrigin && typeof window !== "undefined") {
-          return await this._sendBridgeRequest(url, {
-            method,
-            body: options.body
-          });
-        }
-
         const fetchOptions = {
-          method,
-          credentials: "same-origin",
-          cache: options.cache || "no-store"
+          method: options.method || "GET",
+          credentials: "same-origin"
         };
 
         const headers = { ...(options.headers || {}) };
@@ -473,99 +335,6 @@
       } catch (error) {
         return null;
       }
-    }
-
-    _sendBridgeRequest(url, options = {}) {
-      if (typeof window === "undefined" || typeof document === "undefined") {
-        return Promise.resolve(null);
-      }
-
-      const method = (options.method || "GET").toUpperCase();
-      const payload = options.body;
-      const requestId = generateId("dsqBridge");
-      const targetOrigin = window.location ? window.location.origin : "";
-
-      return new Promise((resolve) => {
-        let settled = false;
-        let timeoutId = null;
-        let iframe = null;
-
-        const handleMessage = (event) => {
-          if (!isTrustedBridgeOrigin(event.origin, url)) {
-            return;
-          }
-
-          const message = event.data;
-          if (
-            !message ||
-            message.source !== "apps-script-bridge" ||
-            message.requestId !== requestId
-          ) {
-            return;
-          }
-
-          finalize(message.ok === false ? null : message.data || null);
-        };
-
-        const cleanup = () => {
-          window.removeEventListener("message", handleMessage);
-          if (timeoutId) {
-            window.clearTimeout(timeoutId);
-            timeoutId = null;
-          }
-          if (iframe && iframe.parentNode) {
-            iframe.parentNode.removeChild(iframe);
-          }
-          iframe = null;
-        };
-
-        const finalize = (value) => {
-          if (settled) {
-            return;
-          }
-          settled = true;
-          cleanup();
-          resolve(value);
-        };
-
-        window.addEventListener("message", handleMessage);
-
-        iframe = document.createElement("iframe");
-        iframe.style.display = "none";
-        iframe.setAttribute("aria-hidden", "true");
-        iframe.tabIndex = -1;
-
-        const params = new URLSearchParams();
-        params.set("transport", "postmessage");
-        params.set("requestId", requestId);
-        if (targetOrigin) {
-          params.set("origin", targetOrigin);
-        }
-        params.set("method", method);
-        if (payload !== undefined) {
-          params.set("payload", payload);
-        }
-        params.set("_", String(Date.now()));
-
-        const separator = url.includes("?") ? "&" : "?";
-        iframe.src = `${url}${separator}${params.toString()}`;
-
-        iframe.onerror = () => {
-          finalize(null);
-        };
-
-        const host = document.body || document.documentElement;
-        if (!host) {
-          finalize(null);
-          return;
-        }
-
-        host.appendChild(iframe);
-
-        timeoutId = window.setTimeout(() => {
-          finalize(null);
-        }, this._bridgeTimeoutMs);
-      });
     }
 
     _startRemotePolling() {
@@ -966,24 +735,16 @@
   }
 
   class DashboardView {
-    constructor(container, store, options = {}) {
+    constructor(container, store) {
       this.container = container;
       this.store = store;
       this.elements = {};
-      this.options = options || {};
-      this.autoUpdate = options.autoUpdate !== false;
-      this.refreshIntervalMs = this._resolveRefreshInterval(
-        options.refreshIntervalMs
-      );
-      this.autoUpdateTimer = null;
-      this.handleUpdate = this.update.bind(this);
-
       this.render();
       this.update();
 
+      this.handleUpdate = this.update.bind(this);
       if (typeof window !== "undefined") {
         window.addEventListener(SESSION_EVENT_NAME, this.handleUpdate);
-        this._scheduleAutoUpdate();
       }
     }
 
@@ -1068,38 +829,6 @@
       this._renderSessions(snapshot.activeSessions);
     }
 
-    _resolveRefreshInterval(value) {
-      if (value === undefined || value === null) {
-        return DASHBOARD_DEFAULT_REFRESH_INTERVAL;
-      }
-      const parsed = Number(value);
-      if (!Number.isFinite(parsed) || parsed <= 0) {
-        return 0;
-      }
-      return parsed;
-    }
-
-    _scheduleAutoUpdate() {
-      if (!this.autoUpdate || typeof window === "undefined") {
-        return;
-      }
-      if (this.refreshIntervalMs <= 0) {
-        return;
-      }
-      this._clearAutoUpdate();
-      this.autoUpdateTimer = window.setInterval(
-        this.handleUpdate,
-        this.refreshIntervalMs
-      );
-    }
-
-    _clearAutoUpdate() {
-      if (this.autoUpdateTimer && typeof window !== "undefined") {
-        window.clearInterval(this.autoUpdateTimer);
-      }
-      this.autoUpdateTimer = null;
-    }
-
     _renderSessions(sessions = []) {
       const list = this.elements.sessionList;
       list.innerHTML = "";
@@ -1160,105 +889,67 @@
     }
 
     destroy() {
-      this._clearAutoUpdate();
       if (typeof window !== "undefined") {
         window.removeEventListener(SESSION_EVENT_NAME, this.handleUpdate);
       }
     }
   }
 
-  function normalizeStringsInput(rawStrings) {
-    const strings = {};
-    if (rawStrings && typeof rawStrings === "object") {
-      Object.keys(rawStrings).forEach((key) => {
-        const value = rawStrings[key];
-        if (typeof value === "string") {
-          strings[key] = value;
-        } else if (value !== null && typeof value !== "undefined") {
-          strings[key] = String(value);
-        }
-      });
+  function normalizeConfig(userConfig = {}) {
+    const config = JSON.parse(JSON.stringify(defaultConfig));
+    if (!userConfig) {
+      return config;
     }
 
-    STRING_KEYS.forEach((key) => {
-      if (typeof strings[key] !== "string") {
-        strings[key] = "";
+    if (userConfig.title) config.title = userConfig.title;
+    if (userConfig.description) config.description = userConfig.description;
+    if (userConfig.modules) config.modules = userConfig.modules;
+    if (userConfig.certificateMessage) {
+      config.certificateMessage = userConfig.certificateMessage;
+    }
+    if (userConfig.strings) {
+      config.strings = { ...config.strings, ...userConfig.strings };
+    }
+
+    config.modules = config.modules.map((module) => {
+      const normalizedModule = { ...module };
+      if (
+        !Array.isArray(normalizedModule.questionPool) &&
+        Array.isArray(normalizedModule.questions)
+      ) {
+        normalizedModule.questionPool = normalizedModule.questions;
       }
-    });
 
-    return strings;
-  }
-
-  function deepCloneQuestion(question) {
-    try {
-      return JSON.parse(JSON.stringify(question));
-    } catch (error) {
-      return { ...question };
-    }
-  }
-
-  function normalizeModule(module) {
-    if (!module || typeof module !== "object") {
-      return {
-        questionPool: [],
-        questionsPerSession: 0,
-        tips: []
-      };
-    }
-
-    const normalizedModule = { ...module };
-    const poolSource = Array.isArray(normalizedModule.questionPool)
-      ? normalizedModule.questionPool
-      : Array.isArray(normalizedModule.questions)
-        ? normalizedModule.questions
+      normalizedModule.questionPool = Array.isArray(normalizedModule.questionPool)
+        ? normalizedModule.questionPool.map((question) =>
+            JSON.parse(JSON.stringify(question))
+          )
         : [];
 
-    normalizedModule.questionPool = poolSource
-      .filter(Boolean)
-      .map((question) => deepCloneQuestion(question));
+      const poolLength = normalizedModule.questionPool.length;
 
-    normalizedModule.tips = Array.isArray(normalizedModule.tips)
-      ? normalizedModule.tips.map((tip) => toText(tip))
-      : [];
+      if (
+        typeof normalizedModule.questionsPerSession !== "number" ||
+        Number.isNaN(normalizedModule.questionsPerSession) ||
+        normalizedModule.questionsPerSession <= 0
+      ) {
+        normalizedModule.questionsPerSession = Math.min(5, poolLength);
+      } else {
+        const desired = Math.floor(normalizedModule.questionsPerSession);
+        normalizedModule.questionsPerSession =
+          poolLength > 0 ? Math.max(1, Math.min(desired, poolLength)) : 0;
+      }
 
-    const poolLength = normalizedModule.questionPool.length;
+      delete normalizedModule.questions;
+      return normalizedModule;
+    });
 
-    if (
-      typeof normalizedModule.questionsPerSession !== "number" ||
-      Number.isNaN(normalizedModule.questionsPerSession) ||
-      normalizedModule.questionsPerSession <= 0
-    ) {
-      normalizedModule.questionsPerSession = Math.min(5, poolLength);
-    } else {
-      const desired = Math.floor(normalizedModule.questionsPerSession);
-      normalizedModule.questionsPerSession =
-        poolLength > 0 ? Math.max(1, Math.min(desired, poolLength)) : 0;
-    }
-
-    delete normalizedModule.questions;
-    return normalizedModule;
-  }
-
-  function normalizeConfig(userConfig = {}) {
-    const hasConfig = userConfig && typeof userConfig === "object";
-    const modules = hasConfig && Array.isArray(userConfig.modules)
-      ? userConfig.modules
-      : [];
-
-    return {
-      title: hasConfig ? toText(userConfig.title) : "",
-      description: hasConfig ? toText(userConfig.description) : "",
-      certificateMessage: hasConfig
-        ? toText(userConfig.certificateMessage)
-        : "",
-      strings: normalizeStringsInput(hasConfig ? userConfig.strings : {}),
-      modules: modules.map((module) => normalizeModule(module))
-    };
+    return config;
   }
 
   class DigitalSafetyQuiz {
     constructor(options = {}) {
-      this.apiBaseUrl = sanitizeApiBaseUrl(options.apiBaseUrl || "");
+      this.apiBaseUrl = options.apiBaseUrl || "";
       this.config = normalizeConfig(options.config);
       this.container =
         typeof options.container === "string"

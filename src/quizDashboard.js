@@ -8,14 +8,14 @@
     return container || null;
   }
 
-  function createStore(providedStore, storeOptions = {}) {
+  function createStore(providedStore) {
     if (providedStore) {
       return providedStore;
     }
 
     const dashboardAPI = global.DSQDashboard || {};
     if (dashboardAPI.DailySessionStore) {
-      return new dashboardAPI.DailySessionStore(storeOptions);
+      return new dashboardAPI.DailySessionStore();
     }
 
     throw new Error(
@@ -23,7 +23,7 @@
     );
   }
 
-  function createView(container, store, viewOptions = {}) {
+  function createView(container, store) {
     const dashboardAPI = global.DSQDashboard || {};
     if (!dashboardAPI.DashboardView) {
       throw new Error(
@@ -31,7 +31,7 @@
       );
     }
 
-    return new dashboardAPI.DashboardView(container, store, viewOptions);
+    return new dashboardAPI.DashboardView(container, store);
   }
 
   function createDigitalSafetyDashboard(options = {}) {
@@ -42,28 +42,8 @@
       );
     }
 
-    const storeOptions = {
-      ...(options.storeOptions || {})
-    };
-
-    if (options.apiBaseUrl && !storeOptions.apiBaseUrl) {
-      storeOptions.apiBaseUrl = options.apiBaseUrl;
-    }
-
-    if (
-      typeof options.heartbeatIntervalMs === "number" &&
-      storeOptions.heartbeatIntervalMs === undefined
-    ) {
-      storeOptions.heartbeatIntervalMs = options.heartbeatIntervalMs;
-    }
-
-    const store = createStore(options.store, storeOptions);
-    const viewOptions = {
-      refreshIntervalMs: options.refreshIntervalMs,
-      autoUpdate: options.autoUpdate
-    };
-
-    return createView(container, store, viewOptions);
+    const store = createStore(options.store);
+    return createView(container, store);
   }
 
   global.createDigitalSafetyDashboard = createDigitalSafetyDashboard;

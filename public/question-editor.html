@@ -13,7 +13,6 @@
         <a class="admin-button admin-secondary" href="questions.html">Terug naar overzicht</a>
       </header>
       <section class="admin-card">
-        <p class="admin-hint" id="editor-hint"></p>
         <div id="editor-feedback"></div>
         <form class="admin-form" id="question-form">
           <div class="admin-field">
@@ -47,9 +46,7 @@
             <textarea id="feedback-incorrect" rows="2"></textarea>
           </div>
           <div class="admin-actions">
-            <button type="submit" class="admin-button">
-              Opslaan (via Google Sheets)
-            </button>
+            <button type="submit" class="admin-button">Opslaan</button>
             <button type="button" class="admin-button admin-secondary" id="cancel-button">
               Annuleren
             </button>
@@ -57,7 +54,6 @@
         </form>
       </section>
     </main>
-    <script src="../src/googleSheetsConfigClient.js"></script>
     <script src="../src/questionEditor.js" defer></script>
   </body>
 </html>
