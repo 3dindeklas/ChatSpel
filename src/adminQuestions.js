@@ -48,6 +48,19 @@
     container.innerHTML = "";
   }
 
+  function resolveModuleTitle(question) {
+    if (!question || typeof question !== "object") {
+      return "Onbekende module";
+    }
+
+    return (
+      question.moduleTitle ||
+      question.module_title ||
+      question.moduletitle ||
+      "Onbekende module"
+    );
+  }
+
   function renderQuestions(table, emptyState, questions) {
     const tbody = table.querySelector("tbody");
     tbody.innerHTML = "";
@@ -68,7 +81,7 @@
       });
 
       const moduleCell = createElement("td", {
-        text: question.moduleTitle || "Onbekende module"
+        text: resolveModuleTitle(question)
       });
 
       const typeCell = createElement("td", {

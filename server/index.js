@@ -136,10 +136,38 @@ app.get(
       0
     );
 
+    const answeredDayExpression = db?.isPostgres
+      ? "DATE(answered_at::timestamptz)"
+      : "DATE(answered_at)";
+
+    const dailyRows = await allQuery(
+      `SELECT ${answeredDayExpression} AS answer_day,
+              COUNT(*) AS total_attempts,
+              SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) AS correct_attempts,
+              SUM(CASE WHEN is_correct = 0 THEN 1 ELSE 0 END) AS incorrect_attempts,
+              COUNT(DISTINCT session_id) AS session_count
+         FROM session_attempts
+        WHERE answered_at IS NOT NULL
+        GROUP BY ${answeredDayExpression}
+        ORDER BY answer_day DESC
+        LIMIT 30`
+    );
+
+    const dailyPerformance = dailyRows.map((row) => ({
+      date: row.answer_day,
+      totalAttempts:
+        Number(row.total_attempts ?? row.totalAttempts ?? 0) || 0,
+      correct: Number(row.correct_attempts ?? row.correctAttempts ?? 0) || 0,
+      incorrect:
+        Number(row.incorrect_attempts ?? row.incorrectAttempts ?? 0) || 0,
+      sessions: Number(row.session_count ?? row.sessionCount ?? 0) || 0
+    }));
+
     res.json({
       databaseType,
       totalQuestions,
-      categories: normalizedCategories
+      categories: normalizedCategories,
+      dailyPerformance
     });
   })
 );
@@ -154,7 +182,26 @@ app.get(
        INNER JOIN modules m ON q.module_id = m.id
        ORDER BY m.position ASC, q.position ASC`
     );
-    res.json(rows);
+
+    const normalized = rows.map((row) => {
+      const moduleId = row.moduleId || row.module_id || row.moduleid || null;
+      const moduleTitle =
+        row.moduleTitle ||
+        row.module_title ||
+        row.moduletitle ||
+        "Onbekende module";
+
+      return {
+        id: row.id,
+        text: row.text,
+        type: row.type,
+        moduleId,
+        moduleTitle,
+        position: row.position
+      };
+    });
+
+    res.json(normalized);
   })
 );
 
@@ -436,9 +483,21 @@ app.get(
     );
 
     const attemptsMap = attemptRows.reduce((acc, row) => {
-      acc[row.sessionId] = {
-        correct: row.correct || 0,
-        incorrect: row.incorrect || 0
+      const sessionId = row.sessionId || row.session_id || row.sessionid;
+      if (!sessionId) {
+        return acc;
+      }
+
+      const correct = Number(
+        row.correct ?? row.correct_attempts ?? row.correctattempts ?? 0
+      );
+      const incorrect = Number(
+        row.incorrect ?? row.incorrect_attempts ?? row.incorrectattempts ?? 0
+      );
+
+      acc[sessionId] = {
+        correct: Number.isFinite(correct) ? correct : 0,
+        incorrect: Number.isFinite(incorrect) ? incorrect : 0
       };
       return acc;
     }, {});
