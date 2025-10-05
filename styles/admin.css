@@ -29,6 +29,7 @@ body {
   display: flex;
   align-items: center;
   gap: 1rem;
+  color: #FFF;
 }
 
 .admin-menu-wrapper {
@@ -104,6 +105,14 @@ body {
   border-radius: 12px;
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
   padding: 1.5rem;
+}
+
+.admin-card + .admin-card {
+  margin-top: 3rem;
+}
+
+.admin-card :first-child {
+  margin-top: 0;
 }
 
 .admin-button {
@@ -189,6 +198,7 @@ body {
 }
 
 .admin-field input[type="text"],
+.admin-field input[type="number"],
 .admin-field textarea,
 .admin-field select {
   padding: 0.65rem 0.75rem;
