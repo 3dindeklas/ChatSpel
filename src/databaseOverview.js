@@ -1,6 +1,11 @@
 (function () {
   "use strict";
 
+  const dutchDateFormatter =
+    typeof Intl !== "undefined" && Intl.DateTimeFormat
+      ? new Intl.DateTimeFormat("nl-NL", { dateStyle: "long" })
+      : null;
+
   function createElement(tag, options = {}) {
     const element = document.createElement(tag);
     if (options.className) {
@@ -24,6 +29,17 @@
   }
 
   function renderCategories(container, categories, totalQuestions) {
+    const section = createElement("section", {
+      className: "database-overview__section"
+    });
+
+    section.append(
+      createElement("h2", {
+        className: "database-overview__heading",
+        text: "Vragen per categorie"
+      })
+    );
+
     const table = createElement("table", {
       className: "database-overview__table"
     });
@@ -49,14 +65,100 @@
       tbody.append(row);
     });
     table.append(tbody);
-    container.append(table);
+    section.append(table);
 
-    container.append(
+    section.append(
       createElement("p", {
         className: "database-overview__total",
         text: `Totaal aantal vragen: ${totalQuestions}`
       })
     );
+
+    container.append(section);
+  }
+
+  function formatDate(value) {
+    if (!value) {
+      return "Onbekende datum";
+    }
+    try {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return value;
+      }
+      if (dutchDateFormatter) {
+        return dutchDateFormatter.format(date);
+      }
+      return date.toLocaleDateString();
+    } catch (error) {
+      return value;
+    }
+  }
+
+  function renderDailyPerformance(container, stats) {
+    const section = createElement("section", {
+      className: "database-overview__section"
+    });
+
+    section.append(
+      createElement("h2", {
+        className: "database-overview__heading",
+        text: "Beantwoorde vragen per dag"
+      })
+    );
+
+    if (!Array.isArray(stats) || !stats.length) {
+      section.append(
+        createElement("p", {
+          className: "database-overview__empty",
+          text: "Er zijn nog geen beantwoorde vragen gevonden."
+        })
+      );
+      container.append(section);
+      return;
+    }
+
+    const table = createElement("table", {
+      className: "database-overview__table"
+    });
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    headerRow.append(
+      createElement("th", { text: "Datum" }),
+      createElement("th", { text: "Juist", className: "database-overview__number" }),
+      createElement("th", { text: "Onjuist", className: "database-overview__number" }),
+      createElement("th", { text: "Sessies", className: "database-overview__number" })
+    );
+    thead.append(headerRow);
+    table.append(thead);
+
+    const tbody = document.createElement("tbody");
+    stats.forEach((item) => {
+      const row = document.createElement("tr");
+      row.append(
+        createElement("td", {
+          text: formatDate(item.date),
+          className: "database-overview__date"
+        }),
+        createElement("td", {
+          text: String(item.correct ?? 0),
+          className: "database-overview__number"
+        }),
+        createElement("td", {
+          text: String(item.incorrect ?? 0),
+          className: "database-overview__number"
+        }),
+        createElement("td", {
+          text: String(item.sessions ?? 0),
+          className: "database-overview__number"
+        })
+      );
+      tbody.append(row);
+    });
+    table.append(tbody);
+
+    section.append(table);
+    container.append(section);
   }
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -89,10 +191,14 @@
               text: "Er zijn nog geen categorieën met vragen gevonden."
             })
           );
-          return;
+        } else {
+          renderCategories(container, categories, info.totalQuestions || 0);
         }
 
-        renderCategories(container, categories, info.totalQuestions || 0);
+        const dailyStats = Array.isArray(info.dailyPerformance)
+          ? info.dailyPerformance
+          : [];
+        renderDailyPerformance(container, dailyStats);
       })
       .catch((error) => {
         container.innerHTML = "";

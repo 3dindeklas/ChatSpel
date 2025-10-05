@@ -238,6 +238,7 @@
   border: 2px solid #cbd5f5;
   margin-top: 1rem;
   font-size: 1rem;
+  box-sizing: border-box;
 }
 
 .dsq-input:focus {
@@ -543,5 +544,21 @@
   color: #b91c1c;
   border-radius: 12px;
   padding: 0.75rem 1rem;
+}
+
+.database-overview__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.database-overview__heading {
+  font-size: 1.15rem;
+  color: #0f172a;
+}
+
+.database-overview__date {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 

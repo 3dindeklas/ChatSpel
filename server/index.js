@@ -136,10 +136,38 @@ app.get(
       0
     );
 
+    const answeredDayExpression = db?.isPostgres
+      ? "DATE(answered_at::timestamptz)"
+      : "DATE(answered_at)";
+
+    const dailyRows = await allQuery(
+      `SELECT ${answeredDayExpression} AS answer_day,
+              COUNT(*) AS total_attempts,
+              SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) AS correct_attempts,
+              SUM(CASE WHEN is_correct = 0 THEN 1 ELSE 0 END) AS incorrect_attempts,
+              COUNT(DISTINCT session_id) AS session_count
+         FROM session_attempts
+        WHERE answered_at IS NOT NULL
+        GROUP BY ${answeredDayExpression}
+        ORDER BY answer_day DESC
+        LIMIT 30`
+    );
+
+    const dailyPerformance = dailyRows.map((row) => ({
+      date: row.answer_day,
+      totalAttempts:
+        Number(row.total_attempts ?? row.totalAttempts ?? 0) || 0,
+      correct: Number(row.correct_attempts ?? row.correctAttempts ?? 0) || 0,
+      incorrect:
+        Number(row.incorrect_attempts ?? row.incorrectAttempts ?? 0) || 0,
+      sessions: Number(row.session_count ?? row.sessionCount ?? 0) || 0
+    }));
+
     res.json({
       databaseType,
       totalQuestions,
-      categories: normalizedCategories
+      categories: normalizedCategories,
+      dailyPerformance
     });
   })
 );
