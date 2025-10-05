@@ -103,6 +103,18 @@ instellen via JavaScript:
 <script src="https://jouw-domein.nl/path/to/digitalSafetyQuiz.js"></script>
 ```
 
+### Custom element (zonder iframe)
+
+Gebruik je het custom-elementscript (`digitalSafetyQuizCE.js`) in Wix, dan vul je de attributen als volgt in:
+
+| Attribuut | Verplicht | Voorbeeldwaarde | Uitleg |
+| --- | --- | --- | --- |
+| `data-config-url` | Ja, als je vragen wilt tonen | `https://jouw-backend.nl/api/quiz-config` | Absolute URL naar een JSON-configuratie in hetzelfde formaat als [`/api/quiz-config`](server/index.js). Wanneer je de Node-server online hebt staan, verwijs je direct naar dat endpoint. Zonder back-end kun je een statisch `.json`-bestand uploaden (zie [`data/quizData.json`](data/quizData.json) voor de structuur) en de volledige URL naar dat bestand invullen. |
+| `data-api-base` | Optioneel maar aanbevolen | `https://jouw-backend.nl` | Basis-URL voor de API die sessies, statistieken en certificaatgegevens verwerkt. Laat leeg als je alleen een statische quiz zonder opslag gebruikt. Het script voegt zelf `/api/...` toe voor de verschillende requests. |
+| `data-enable-certificate` | Optioneel | *(laat leeg, attribuut alleen toevoegen)* | Wanneer dit attribuut aanwezig is wordt `html2canvas` geladen zodat de downloadknop voor het certificaat werkt. |
+
+Zorg er daarnaast voor dat `digitalSafetyQuiz.css`, `digitalSafetyQuiz.js` en (optioneel) `html2canvas` via `ensureStylesheet`/`ensureScript` worden geladen zoals in het voorbeeld in `public/digitalSafetyQuizCE.js`. Zonder geldige `data-config-url` blijft de modulelijst leeg en verschijnen er geen vragen.
+
 ### Configuratie aanpassen
 
 Je kunt de quiz personaliseren door een configuratie-object mee te geven bij het initialiseren:
