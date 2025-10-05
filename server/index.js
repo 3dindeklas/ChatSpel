@@ -182,7 +182,26 @@ app.get(
        INNER JOIN modules m ON q.module_id = m.id
        ORDER BY m.position ASC, q.position ASC`
     );
-    res.json(rows);
+
+    const normalized = rows.map((row) => {
+      const moduleId = row.moduleId || row.module_id || row.moduleid || null;
+      const moduleTitle =
+        row.moduleTitle ||
+        row.module_title ||
+        row.moduletitle ||
+        "Onbekende module";
+
+      return {
+        id: row.id,
+        text: row.text,
+        type: row.type,
+        moduleId,
+        moduleTitle,
+        position: row.position
+      };
+    });
+
+    res.json(normalized);
   })
 );
 
@@ -464,9 +483,21 @@ app.get(
     );
 
     const attemptsMap = attemptRows.reduce((acc, row) => {
-      acc[row.sessionId] = {
-        correct: row.correct || 0,
-        incorrect: row.incorrect || 0
+      const sessionId = row.sessionId || row.session_id || row.sessionid;
+      if (!sessionId) {
+        return acc;
+      }
+
+      const correct = Number(
+        row.correct ?? row.correct_attempts ?? row.correctattempts ?? 0
+      );
+      const incorrect = Number(
+        row.incorrect ?? row.incorrect_attempts ?? row.incorrectattempts ?? 0
+      );
+
+      acc[sessionId] = {
+        correct: Number.isFinite(correct) ? correct : 0,
+        incorrect: Number.isFinite(incorrect) ? incorrect : 0
       };
       return acc;
     }, {});
