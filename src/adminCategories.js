@@ -163,7 +163,12 @@
         nameInput.value = module.title || "";
       }
       if (questionsInput) {
-        questionsInput.value = String(module.questionsPerSession || 1);
+        const value =
+          module.questionsPerSession !== undefined &&
+          module.questionsPerSession !== null
+            ? module.questionsPerSession
+            : 1;
+        questionsInput.value = String(value);
       }
       if (activeInput) {
         activeInput.checked = Boolean(module.isActive);
@@ -219,7 +224,10 @@
         }
 
         const questionsCell = createElement("td", {
-          text: String(module.questionsPerSession)
+          text:
+            module.questionsPerSession && module.questionsPerSession > 0
+              ? String(module.questionsPerSession)
+              : "—"
         });
 
         const statusCell = createElement("td");

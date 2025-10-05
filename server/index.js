@@ -286,11 +286,19 @@ app.get(
       `SELECT m.id,
               m.title,
               m.position,
+              m.is_active AS isActive,
               m.questions_per_session AS questionsPerSession,
-              COUNT(q.id) AS questionCount
+              SUM(
+                CASE
+                  WHEN LOWER(COALESCE(CAST(m.is_active AS TEXT), '0')) IN ('1', 'true', 't')
+                       AND q.id IS NOT NULL
+                  THEN 1
+                  ELSE 0
+                END
+              ) AS questionCount
          FROM modules m
          LEFT JOIN questions q ON q.module_id = m.id
-        GROUP BY m.id, m.title, m.position, m.questions_per_session
+        GROUP BY m.id, m.title, m.position, m.is_active, m.questions_per_session
         ORDER BY m.position ASC`
     );
 
@@ -308,12 +316,38 @@ app.get(
         return Number.isFinite(numeric) && numeric > 0
           ? Math.floor(numeric)
           : 0;
+      })(),
+      isActive: (() => {
+        const raw =
+          category.isActive ??
+          category.is_active ??
+          category.isactive ??
+          false;
+        if (raw === true || raw === 1) {
+          return true;
+        }
+        if (raw === false || raw === 0) {
+          return false;
+        }
+        const normalized = String(raw).trim().toLowerCase();
+        return ["1", "true", "t", "yes", "aan"].includes(normalized);
       })()
     }));
 
-    const totalQuestions = normalizedCategories.reduce(
-      (sum, category) => sum + category.questionCount,
-      0
+    const totalQuestionsRow = await getQuery(
+      `SELECT COUNT(q.id) AS total
+         FROM questions q
+         INNER JOIN modules m ON m.id = q.module_id
+        WHERE LOWER(COALESCE(CAST(m.is_active AS TEXT), '0')) IN ('1', 'true', 't')`
+    );
+
+    const totalQuestions = Number(
+      totalQuestionsRow?.total ??
+        totalQuestionsRow?.count ??
+        normalizedCategories.reduce(
+          (sum, category) => sum + category.questionCount,
+          0
+        )
     );
 
     const answeredDayExpression = db?.isPostgres

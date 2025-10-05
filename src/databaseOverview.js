@@ -93,8 +93,21 @@
 
     sanitizedCategories.forEach((category) => {
       const row = document.createElement("tr");
+      const nameCell = createElement("td");
+      const nameContent = category.title || "Onbekende categorie";
+      nameCell.append(createElement("span", { text: nameContent }));
+      if (!category.isActive) {
+        nameCell.append(" ");
+        nameCell.append(
+          createElement("span", {
+            className: "admin-tag admin-tag--muted",
+            text: "Inactief"
+          })
+        );
+      }
+
       row.append(
-        createElement("td", { text: category.title || "Onbekende categorie" }),
+        nameCell,
         createElement("td", {
           text: String(category.questionCount),
           className: "database-overview__number"
