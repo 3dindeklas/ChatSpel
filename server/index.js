@@ -360,16 +360,10 @@ app.get(
               m.position,
               m.is_active AS isActive,
               m.questions_per_session AS questionsPerSession,
-              CASE
-                WHEN LOWER(COALESCE(CAST(m.is_active AS TEXT), '0')) IN ('1', 'true', 't')
-                THEN (
-                  SELECT COUNT(q_inner.id)
-                    FROM questions q_inner
-                   WHERE q_inner.module_id = m.id
-                )
-                ELSE 0
-              END AS questionCount
+              COUNT(q.id) AS questionCount
          FROM modules m
+         LEFT JOIN questions q ON q.module_id = m.id
+        GROUP BY m.id, m.title, m.position, m.is_active, m.questions_per_session
         ORDER BY m.position ASC`
     );
 

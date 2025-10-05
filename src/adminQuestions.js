@@ -14,10 +14,31 @@
     }
     if (options.attrs) {
       Object.entries(options.attrs).forEach(([key, value]) => {
-        element.setAttribute(key, value);
+        if (value !== undefined && value !== null) {
+          element.setAttribute(key, value);
+        }
       });
     }
     return element;
+  }
+
+  const ICON_SVGS = {
+    edit:
+      '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15.232 5.232a2.5 2.5 0 0 0-3.536 0l-7.5 7.5a1 1 0 0 0-.263.465l-1 3.5a1 1 0 0 0 1.263 1.263l3.5-1a1 1 0 0 0 .465-.263l7.5-7.5a2.5 2.5 0 0 0 0-3.536l-1.5-1.5Zm-2.122 1.414 1.5 1.5-6.95 6.95-1.5-1.5 6.95-6.95Z"/><path d="M5.586 17H4a1 1 0 0 1-1-1v-1.586a1 1 0 0 1 .293-.707l2 2a1 1 0 0 1-.707.293Z"/></svg>',
+    delete:
+      '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2h3a1 1 0 1 1 0 2h-1v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6H3a1 1 0 1 1 0-2h4Zm6 2H7v11h6V6Zm-4 3a1 1 0 0 1 2 0v5a1 1 0 1 1-2 0V9Zm4 0a1 1 0 0 1 2 0v5a1 1 0 0 1-2 0V9Z"/></svg>'
+  };
+
+  function createIcon(type) {
+    const svg = ICON_SVGS[type];
+    if (!svg) {
+      return null;
+    }
+    const wrapper = document.createElement("span");
+    wrapper.className = "admin-button__icon";
+    wrapper.setAttribute("aria-hidden", "true");
+    wrapper.innerHTML = svg;
+    return wrapper;
   }
 
   function formatType(type) {
@@ -93,27 +114,45 @@
         html: `<span class="admin-tag">${formatType(question.type)}</span>`
       });
 
+      const questionText = question.text || "deze vraag";
+
       const actionCell = createElement("td");
+      const actionGroup = createElement("div", {
+        className: "admin-table__actions"
+      });
       const editLink = createElement("a", {
         className: "admin-button admin-secondary",
-        text: "Bewerken",
         attrs: {
-          href: `question-editor.html?id=${encodeURIComponent(question.id)}`
+          href: `question-editor.html?id=${encodeURIComponent(question.id)}`,
+          "aria-label": `Vraag "${questionText}" bewerken`,
+          title: `Bewerken (${questionText})`
         }
       });
-      actionCell.append(editLink);
+      const editIcon = createIcon("edit");
+      if (editIcon) {
+        editLink.prepend(editIcon);
+      }
+      actionGroup.append(editLink);
 
       const deleteButton = createElement("button", {
         className: "admin-button admin-danger",
-        text: "Verwijderen",
-        attrs: { type: "button" }
+        attrs: {
+          type: "button",
+          "aria-label": `Vraag "${questionText}" verwijderen`,
+          title: `Verwijderen (${questionText})`
+        }
       });
+      const deleteIcon = createIcon("delete");
+      if (deleteIcon) {
+        deleteButton.prepend(deleteIcon);
+      }
       deleteButton.addEventListener("click", () => {
         if (typeof onDelete === "function") {
           onDelete(question, deleteButton);
         }
       });
-      actionCell.append(deleteButton);
+      actionGroup.append(deleteButton);
+      actionCell.append(actionGroup);
 
       row.append(questionCell, moduleCell, typeCell, actionCell);
       tbody.append(row);

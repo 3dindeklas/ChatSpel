@@ -29,15 +29,20 @@
   }
 
   function normalizeQuestionCount(category) {
-    const rawCount =
-      category.questionCount ??
-      category.question_count ??
-      category.questioncount ??
-      0;
-    const numericCount = Number(rawCount);
-    return Number.isFinite(numericCount) && numericCount >= 0
-      ? numericCount
-      : 0;
+    if (!category || typeof category !== "object") {
+      return 0;
+    }
+
+    const numericCount = Number(category.questionCount);
+    if (Number.isFinite(numericCount) && numericCount >= 0) {
+      return numericCount;
+    }
+
+    if (Array.isArray(category.questions)) {
+      return category.questions.length;
+    }
+
+    return 0;
   }
 
   function normalizeConfiguredQuestions(category) {
