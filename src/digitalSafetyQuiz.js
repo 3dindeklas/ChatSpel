@@ -845,7 +845,7 @@
         className: "dsq-dashboard-session-list"
       });
 
-      this.container.append(title, dateEl, metricsWrapper, sessionTitle, sessionList);
+      this.container.append(dateEl, metricsWrapper, sessionTitle, sessionList);
 
       this.elements.date = dateEl;
       this.elements.participants = participantMetric.valueEl;
