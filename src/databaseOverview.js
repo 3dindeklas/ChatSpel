@@ -41,16 +41,29 @@
   }
 
   function normalizeConfiguredQuestions(category) {
-    const rawConfigured =
-      category.questionsPerSession ??
-      category.questions_per_session ??
-      category.questionspersession ??
-      0;
-    const numericConfigured = Number(rawConfigured);
-    if (!Number.isFinite(numericConfigured) || numericConfigured <= 0) {
+    if (!category || typeof category !== "object") {
       return 0;
     }
-    return Math.floor(numericConfigured);
+
+    const candidates = [
+      category.questionsPerSession,
+      category.questions_per_session,
+      category.questions,
+      category.questionspersession
+    ];
+
+    for (const candidate of candidates) {
+      if (candidate === undefined || candidate === null || candidate === "") {
+        continue;
+      }
+
+      const numeric = Number(candidate);
+      if (Number.isFinite(numeric) && numeric > 0) {
+        return Math.floor(numeric);
+      }
+    }
+
+    return 0;
   }
 
   function renderCategories(container, categories, totalQuestions) {

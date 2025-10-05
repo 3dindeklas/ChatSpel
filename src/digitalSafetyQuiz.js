@@ -82,6 +82,36 @@
     return defaults;
   })();
 
+  function extractQuestionsPerSession(source) {
+    if (!source || typeof source !== "object") {
+      return null;
+    }
+
+    const candidates = [
+      source.questionsPerSession,
+      source.questions_per_session,
+      source.questions,
+      source.questionspersession
+    ];
+
+    for (const candidate of candidates) {
+      if (candidate === undefined || candidate === null || candidate === "") {
+        continue;
+      }
+
+      if (Array.isArray(candidate)) {
+        continue;
+      }
+
+      const numeric = Number(candidate);
+      if (Number.isFinite(numeric) && numeric > 0) {
+        return Math.floor(numeric);
+      }
+    }
+
+    return null;
+  }
+
   class IndexedDbAdapter {
     constructor(options = {}) {
       this.dbName = options.dbName || "DigitalSafetyQuizDB";
@@ -988,19 +1018,23 @@
 
       const poolLength = normalizedModule.questionPool.length;
 
-      if (
-        typeof normalizedModule.questionsPerSession !== "number" ||
-        Number.isNaN(normalizedModule.questionsPerSession) ||
-        normalizedModule.questionsPerSession <= 0
-      ) {
-        normalizedModule.questionsPerSession = Math.min(5, poolLength);
-      } else {
-        const desired = Math.floor(normalizedModule.questionsPerSession);
+      const configuredQuestions = extractQuestionsPerSession(normalizedModule);
+
+      if (configuredQuestions === null) {
         normalizedModule.questionsPerSession =
-          poolLength > 0 ? Math.max(1, Math.min(desired, poolLength)) : 0;
+          poolLength > 0 ? Math.min(5, poolLength) : 0;
+      } else if (poolLength > 0) {
+        normalizedModule.questionsPerSession = Math.max(
+          1,
+          Math.min(configuredQuestions, poolLength)
+        );
+      } else {
+        normalizedModule.questionsPerSession = 0;
       }
 
       delete normalizedModule.questions;
+      delete normalizedModule.questions_per_session;
+      delete normalizedModule.questionspersession;
       return normalizedModule;
     });
 
@@ -1217,10 +1251,16 @@
         const pool = Array.isArray(module.questionPool)
           ? module.questionPool
           : [];
-        const questionsPerSession = Math.min(
-          module.questionsPerSession || pool.length,
-          pool.length
-        );
+        const configuredQuestions = extractQuestionsPerSession(module);
+        const questionsPerSession = (() => {
+          if (!pool.length) {
+            return 0;
+          }
+          if (configuredQuestions === null) {
+            return pool.length;
+          }
+          return Math.min(configuredQuestions, pool.length);
+        })();
         const selectedQuestions = selectRandomItems(
           pool,
           questionsPerSession
@@ -1228,6 +1268,7 @@
 
         return {
           ...module,
+          questionsPerSession,
           tips: Array.isArray(module.tips) ? [...module.tips] : [],
           questions: selectedQuestions
         };
@@ -1244,11 +1285,9 @@
       const poolLength = Array.isArray(module.questionPool)
         ? module.questionPool.length
         : 0;
-      if (
-        typeof module.questionsPerSession === "number" &&
-        module.questionsPerSession > 0
-      ) {
-        return Math.min(module.questionsPerSession, poolLength || 0);
+      const configuredQuestions = extractQuestionsPerSession(module);
+      if (configuredQuestions !== null) {
+        return Math.min(configuredQuestions, poolLength || 0);
       }
       return poolLength;
     }

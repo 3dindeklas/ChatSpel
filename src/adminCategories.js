@@ -44,19 +44,37 @@
     }
   }
 
+  function resolveQuestionsPerSessionValue(source, fallback = 1) {
+    if (!source || typeof source !== "object") {
+      return fallback;
+    }
+
+    const candidates = [
+      source.questionsPerSession,
+      source.questions_per_session,
+      source.questions,
+      source.questionspersession
+    ];
+
+    for (const candidate of candidates) {
+      if (candidate === undefined || candidate === null || candidate === "") {
+        continue;
+      }
+
+      const numeric = Number(candidate);
+      if (Number.isFinite(numeric) && numeric > 0) {
+        return Math.floor(numeric);
+      }
+    }
+
+    return fallback;
+  }
+
   function normalizeModule(module) {
     if (!module) {
       return null;
     }
-    const rawQuestions =
-      module.questionsPerSession ??
-      module.questions_per_session ??
-      module.questions ??
-      null;
-    const questions = Number(rawQuestions);
-    const normalizedQuestions = Number.isFinite(questions) && questions > 0
-      ? Math.floor(questions)
-      : 1;
+    const normalizedQuestions = resolveQuestionsPerSessionValue(module, 1);
     return {
       id: module.id,
       title: module.title || "Naamloze categorie",
