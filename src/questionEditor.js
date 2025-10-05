@@ -176,8 +176,11 @@
   function populateModules(select, modules, selectedId) {
     select.innerHTML = "";
     modules.forEach((module) => {
+      const label = module.isActive
+        ? module.title
+        : `${module.title} (inactief)`;
       const option = createElement("option", {
-        text: module.title,
+        text: label,
         attrs: { value: module.id }
       });
       if (selectedId && selectedId === module.id) {

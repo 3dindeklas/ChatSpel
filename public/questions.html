@@ -6,10 +6,32 @@
     <title>Vragenbeheer</title>
     <link rel="stylesheet" href="../styles/admin.css" />
   </head>
-  <body>
+  <body data-admin-page="questions">
     <main class="admin-container">
       <header class="admin-header">
-        <h1>Vragenbeheer</h1>
+        <div class="admin-title-group">
+          <div class="admin-menu-wrapper">
+            <button
+              class="admin-menu-toggle"
+              type="button"
+              aria-label="Open navigatie"
+              aria-expanded="false"
+              aria-controls="admin-menu"
+            >
+              <span class="sr-only">Open navigatie</span>
+              <span class="admin-menu-bar"></span>
+              <span class="admin-menu-bar"></span>
+              <span class="admin-menu-bar"></span>
+            </button>
+            <nav class="admin-menu-dropdown" id="admin-menu" hidden>
+              <a class="admin-menu-link" href="database.html" data-page="database">Database</a>
+              <a class="admin-menu-link" href="categories.html" data-page="categories">Categorieën</a>
+              <a class="admin-menu-link" href="questions.html" data-page="questions">Vragen</a>
+              <a class="admin-menu-link" href="dashboard.html" data-page="dashboard">Live dashboard</a>
+            </nav>
+          </div>
+          <h1>Vragenbeheer</h1>
+        </div>
         <a class="admin-button" href="question-editor.html">Nieuwe vraag</a>
       </header>
       <section class="admin-card" id="questions-card">
@@ -30,6 +52,7 @@
         </div>
       </section>
     </main>
+    <script src="../src/adminMenu.js" defer></script>
     <script src="../src/adminQuestions.js" defer></script>
   </body>
 </html>
