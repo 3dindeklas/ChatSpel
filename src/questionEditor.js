@@ -74,10 +74,10 @@
     });
     const checkbox = createElement("input", {
       attrs: {
-        type: "checkbox",
-        checked: option.isCorrect ? "checked" : undefined
+        type: "checkbox"
       }
     });
+    checkbox.checked = Boolean(option.isCorrect);
     const checkboxLabel = createElement("span", { text: "Juist" });
     checkboxWrapper.append(checkbox, checkboxLabel);
 
