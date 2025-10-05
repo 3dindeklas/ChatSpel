@@ -48,12 +48,19 @@
     if (!module) {
       return null;
     }
-    const questions = Number(module.questionsPerSession);
+    const rawQuestions =
+      module.questionsPerSession ??
+      module.questions_per_session ??
+      module.questions ??
+      null;
+    const questions = Number(rawQuestions);
+    const normalizedQuestions = Number.isFinite(questions) && questions > 0
+      ? Math.floor(questions)
+      : 1;
     return {
       id: module.id,
       title: module.title || "Naamloze categorie",
-      questionsPerSession:
-        Number.isFinite(questions) && questions > 0 ? questions : 1,
+      questionsPerSession: normalizedQuestions,
       isActive: Boolean(module.isActive)
     };
   }
@@ -325,8 +332,10 @@
         }
 
         const title = nameInput ? nameInput.value.trim() : "";
-        const questionsValue = questionsInput ? questionsInput.value : "";
-        const questionsPerSession = Number.parseInt(questionsValue, 10);
+        const rawQuestions = questionsInput ? questionsInput.valueAsNumber : NaN;
+        const questionsPerSession = Number.isFinite(rawQuestions)
+          ? Math.floor(rawQuestions)
+          : NaN;
         const isActive = activeInput ? activeInput.checked : true;
 
         clearFeedback(formFeedback);

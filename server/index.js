@@ -70,11 +70,16 @@ function parseQuestionsPerSession(value, fallback) {
     return fallback;
   }
 
-  const numeric = Number.parseInt(value, 10);
+  let numericValue = value;
+  if (typeof numericValue === "string") {
+    numericValue = numericValue.replace(/,/g, ".");
+  }
+
+  const numeric = Number.parseFloat(numericValue);
   if (!Number.isFinite(numeric) || numeric <= 0) {
     return fallback;
   }
-  return numeric;
+  return Math.floor(numeric);
 }
 
 function normalizeModuleRow(row) {
@@ -281,17 +286,29 @@ app.get(
       `SELECT m.id,
               m.title,
               m.position,
+              m.questions_per_session AS questionsPerSession,
               COUNT(q.id) AS questionCount
          FROM modules m
          LEFT JOIN questions q ON q.module_id = m.id
-        GROUP BY m.id, m.title, m.position
+        GROUP BY m.id, m.title, m.position, m.questions_per_session
         ORDER BY m.position ASC`
     );
 
     const normalizedCategories = categories.map((category) => ({
       id: category.id,
       title: category.title || "Onbekende categorie",
-      questionCount: Number(category.questionCount) || 0
+      questionCount: Number(category.questionCount) || 0,
+      questionsPerSession: (() => {
+        const raw =
+          category.questionsPerSession ??
+          category.questions_per_session ??
+          category.questionspersession ??
+          0;
+        const numeric = Number(raw);
+        return Number.isFinite(numeric) && numeric > 0
+          ? Math.floor(numeric)
+          : 0;
+      })()
     }));
 
     const totalQuestions = normalizedCategories.reduce(
