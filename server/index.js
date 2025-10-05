@@ -97,11 +97,33 @@ function normalizeModuleRow(row) {
     id: row.id,
     title: row.title,
     questionsPerSession,
-    isActive:
-      row.isActive === true ||
-      row.is_active === 1 ||
-      row.is_active === true ||
-      row.isactive === 1
+    isActive: (() => {
+      const rawValue =
+        row.isActive ?? row.is_active ?? row.isactive ?? row.active ?? null;
+
+      if (typeof rawValue === "boolean") {
+        return rawValue;
+      }
+
+      if (typeof rawValue === "number") {
+        return rawValue !== 0;
+      }
+
+      if (typeof rawValue === "string") {
+        const normalized = rawValue.trim().toLowerCase();
+        if (normalized === "") {
+          return false;
+        }
+        if (["0", "false", "nee", "uit"].includes(normalized)) {
+          return false;
+        }
+        return ["1", "true", "t", "yes", "aan", "on"].includes(
+          normalized
+        );
+      }
+
+      return Boolean(rawValue);
+    })()
   };
 }
 
@@ -277,6 +299,21 @@ app.put(
   })
 );
 
+app.delete(
+  "/api/modules/:id",
+  asyncHandler(async (req, res) => {
+    const moduleId = req.params.id;
+    const existing = await getModuleById(moduleId);
+    if (!existing) {
+      res.status(404).json({ message: "Categorie niet gevonden" });
+      return;
+    }
+
+    await runQuery("DELETE FROM modules WHERE id = ?", [moduleId]);
+    res.status(204).send();
+  })
+);
+
 app.get(
   "/api/database-info",
   asyncHandler(async (req, res) => {
@@ -288,17 +325,16 @@ app.get(
               m.position,
               m.is_active AS isActive,
               m.questions_per_session AS questionsPerSession,
-              SUM(
-                CASE
-                  WHEN LOWER(COALESCE(CAST(m.is_active AS TEXT), '0')) IN ('1', 'true', 't')
-                       AND q.id IS NOT NULL
-                  THEN 1
-                  ELSE 0
-                END
-              ) AS questionCount
+              CASE
+                WHEN LOWER(COALESCE(CAST(m.is_active AS TEXT), '0')) IN ('1', 'true', 't')
+                THEN (
+                  SELECT COUNT(q_inner.id)
+                    FROM questions q_inner
+                   WHERE q_inner.module_id = m.id
+                )
+                ELSE 0
+              END AS questionCount
          FROM modules m
-         LEFT JOIN questions q ON q.module_id = m.id
-        GROUP BY m.id, m.title, m.position, m.is_active, m.questions_per_session
         ORDER BY m.position ASC`
     );
 
@@ -659,6 +695,25 @@ app.post(
       [now, now, id]
     );
     res.json({});
+  })
+);
+
+app.delete(
+  "/api/questions/:id",
+  asyncHandler(async (req, res) => {
+    const questionId = req.params.id;
+    const existing = await getQuery(
+      "SELECT id FROM questions WHERE id = ?",
+      [questionId]
+    );
+
+    if (!existing) {
+      res.status(404).json({ message: "Vraag niet gevonden" });
+      return;
+    }
+
+    await runQuery("DELETE FROM questions WHERE id = ?", [questionId]);
+    res.status(204).send();
   })
 );
 

@@ -113,6 +113,17 @@
     return normalizeModule(data);
   }
 
+  async function deleteModule(id) {
+    const response = await fetch(`/api/modules/${encodeURIComponent(id)}`, {
+      method: "DELETE"
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Kon de categorie niet verwijderen");
+    }
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     const table = document.getElementById("categories-table");
     const tableBody = table ? table.querySelector("tbody") : null;
@@ -287,6 +298,53 @@
           }
         });
         actionCell.append(editButton);
+
+        const deleteButton = createElement("button", {
+          className: "admin-button admin-danger",
+          text: "Verwijderen",
+          attrs: { type: "button" }
+        });
+        deleteButton.addEventListener("click", () => {
+          const moduleName = module.title || "deze categorie";
+          const confirmed = window.confirm(
+            `Weet je zeker dat je de categorie "${moduleName}" wilt verwijderen? ` +
+              "Alle vragen in deze categorie worden ook verwijderd."
+          );
+          if (!confirmed) {
+            return;
+          }
+
+          deleteButton.disabled = true;
+          editButton.disabled = true;
+          clearFeedback(listFeedback);
+
+          deleteModule(module.id)
+            .then(() => {
+              state.modules = state.modules.filter(
+                (item) => item.id !== module.id
+              );
+              if (state.editingId === module.id) {
+                setEditing(null);
+              }
+              renderModules();
+              showFeedback(
+                listFeedback,
+                `Categorie "${moduleName}" en gekoppelde vragen zijn verwijderd.`,
+                "success"
+              );
+            })
+            .catch((error) => {
+              showFeedback(
+                listFeedback,
+                error.message || "Kon de categorie niet verwijderen"
+              );
+            })
+            .finally(() => {
+              deleteButton.disabled = false;
+              editButton.disabled = false;
+            });
+        });
+        actionCell.append(deleteButton);
 
         row.append(nameCell, questionsCell, statusCell, actionCell);
         tableBody.append(row);

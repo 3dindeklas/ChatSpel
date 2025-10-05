@@ -36,6 +36,9 @@
   }
 
   function showFeedback(container, message, variant = "error") {
+    if (!container) {
+      return;
+    }
     container.innerHTML = "";
     const box = createElement("div", {
       className: variant === "error" ? "admin-error" : "admin-success",
@@ -45,7 +48,9 @@
   }
 
   function clearFeedback(container) {
-    container.innerHTML = "";
+    if (container) {
+      container.innerHTML = "";
+    }
   }
 
   function resolveModuleTitle(question) {
@@ -61,7 +66,7 @@
     );
   }
 
-  function renderQuestions(table, emptyState, questions) {
+  function renderQuestions(table, emptyState, questions, onDelete) {
     const tbody = table.querySelector("tbody");
     tbody.innerHTML = "";
 
@@ -98,9 +103,32 @@
       });
       actionCell.append(editLink);
 
+      const deleteButton = createElement("button", {
+        className: "admin-button admin-danger",
+        text: "Verwijderen",
+        attrs: { type: "button" }
+      });
+      deleteButton.addEventListener("click", () => {
+        if (typeof onDelete === "function") {
+          onDelete(question, deleteButton);
+        }
+      });
+      actionCell.append(deleteButton);
+
       row.append(questionCell, moduleCell, typeCell, actionCell);
       tbody.append(row);
     });
+  }
+
+  async function deleteQuestion(id) {
+    const response = await fetch(`/api/questions/${encodeURIComponent(id)}`, {
+      method: "DELETE"
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Kon de vraag niet verwijderen");
+    }
   }
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -108,10 +136,62 @@
     const emptyState = document.getElementById("questions-empty");
     const feedback = document.getElementById("questions-feedback");
 
+    const state = {
+      questions: []
+    };
+
+    function refreshTable() {
+      renderQuestions(table, emptyState, state.questions, handleDelete);
+    }
+
+    function handleDelete(question, button) {
+      if (!question) {
+        return;
+      }
+
+      const questionText = question.text || "deze vraag";
+      const confirmed = window.confirm(
+        `Weet je zeker dat je "${questionText}" wilt verwijderen? ` +
+          "Deze actie kan niet ongedaan worden gemaakt."
+      );
+      if (!confirmed) {
+        return;
+      }
+
+      if (button) {
+        button.disabled = true;
+      }
+
+      clearFeedback(feedback);
+
+      deleteQuestion(question.id)
+        .then(() => {
+          state.questions = state.questions.filter(
+            (item) => item.id !== question.id
+          );
+          refreshTable();
+          showFeedback(
+            feedback,
+            `Vraag "${questionText}" is verwijderd.`,
+            "success"
+          );
+        })
+        .catch((error) => {
+          showFeedback(
+            feedback,
+            error.message || "Kon de vraag niet verwijderen"
+          );
+          if (button) {
+            button.disabled = false;
+          }
+        });
+    }
+
     fetchQuestions()
       .then((questions) => {
+        state.questions = Array.isArray(questions) ? questions : [];
         clearFeedback(feedback);
-        renderQuestions(table, emptyState, questions);
+        refreshTable();
       })
       .catch((error) => {
         showFeedback(
