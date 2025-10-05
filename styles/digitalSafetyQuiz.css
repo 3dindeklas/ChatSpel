@@ -476,3 +476,72 @@
   }
 }
 
+.database-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.database-overview__intro {
+  color: #475569;
+  margin-bottom: 1rem;
+}
+
+.database-overview__type {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.database-overview__table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #f8fafc;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px #e2e8f0;
+}
+
+.database-overview__table th,
+.database-overview__table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+  color: #1f2937;
+}
+
+.database-overview__table th {
+  background: #e2e8f0;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.database-overview__table tr:last-child td {
+  border-bottom: none;
+}
+
+.database-overview__number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.database-overview__total {
+  font-weight: 600;
+  color: #1d4ed8;
+}
+
+.database-overview__empty {
+  color: #64748b;
+  font-style: italic;
+}
+
+.database-overview__loading {
+  color: #475569;
+}
+
+.database-overview__error {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+}
+

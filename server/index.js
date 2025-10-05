@@ -10,7 +10,8 @@ const {
   getQuizConfig,
   runQuery,
   allQuery,
-  getQuery
+  getQuery,
+  db
 } = require("./initializeDatabase");
 
 const app = express();
@@ -105,6 +106,41 @@ app.get(
       "SELECT id, title, questions_per_session AS questionsPerSession FROM modules ORDER BY position ASC"
     );
     res.json(modules);
+  })
+);
+
+app.get(
+  "/api/database-info",
+  asyncHandler(async (req, res) => {
+    const databaseType = db?.isPostgres ? "PostgreSQL" : "SQLite";
+
+    const categories = await allQuery(
+      `SELECT m.id,
+              m.title,
+              m.position,
+              COUNT(q.id) AS questionCount
+         FROM modules m
+         LEFT JOIN questions q ON q.module_id = m.id
+        GROUP BY m.id, m.title, m.position
+        ORDER BY m.position ASC`
+    );
+
+    const normalizedCategories = categories.map((category) => ({
+      id: category.id,
+      title: category.title || "Onbekende categorie",
+      questionCount: Number(category.questionCount) || 0
+    }));
+
+    const totalQuestions = normalizedCategories.reduce(
+      (sum, category) => sum + category.questionCount,
+      0
+    );
+
+    res.json({
+      databaseType,
+      totalQuestions,
+      categories: normalizedCategories
+    });
   })
 );
 
