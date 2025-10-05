@@ -40,6 +40,19 @@
       : 0;
   }
 
+  function normalizeConfiguredQuestions(category) {
+    const rawConfigured =
+      category.questionsPerSession ??
+      category.questions_per_session ??
+      category.questionspersession ??
+      0;
+    const numericConfigured = Number(rawConfigured);
+    if (!Number.isFinite(numericConfigured) || numericConfigured <= 0) {
+      return 0;
+    }
+    return Math.floor(numericConfigured);
+  }
+
   function renderCategories(container, categories, totalQuestions) {
     const section = createElement("section", {
       className: "database-overview__section"
@@ -59,7 +72,14 @@
     const headerRow = document.createElement("tr");
     headerRow.append(
       createElement("th", { text: "Categorie" }),
-      createElement("th", { text: "Aantal vragen", className: "database-overview__number" })
+      createElement("th", {
+        text: "Beschikbare vragen",
+        className: "database-overview__number"
+      }),
+      createElement("th", {
+        text: "Vragen per sessie",
+        className: "database-overview__number"
+      })
     );
     thead.append(headerRow);
     table.append(thead);
@@ -67,7 +87,8 @@
     const tbody = document.createElement("tbody");
     const sanitizedCategories = categories.map((category) => ({
       ...category,
-      questionCount: normalizeQuestionCount(category)
+      questionCount: normalizeQuestionCount(category),
+      questionsPerSession: normalizeConfiguredQuestions(category)
     }));
 
     sanitizedCategories.forEach((category) => {
@@ -76,6 +97,13 @@
         createElement("td", { text: category.title || "Onbekende categorie" }),
         createElement("td", {
           text: String(category.questionCount),
+          className: "database-overview__number"
+        }),
+        createElement("td", {
+          text:
+            category.questionsPerSession > 0
+              ? String(category.questionsPerSession)
+              : "—",
           className: "database-overview__number"
         })
       );

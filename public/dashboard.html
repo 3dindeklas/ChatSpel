@@ -7,11 +7,23 @@
     <link rel="stylesheet" href="../styles/admin.css" />
     <link rel="stylesheet" href="../styles/digitalSafetyQuiz.css" />
   </head>
-  <body data-admin-page="dashboard">
-    <main class="admin-container">
-      <header class="admin-header">
-        <div class="admin-title-group">
-          <div class="admin-menu-wrapper">
+  <body class="dsq-dashboard-page" data-admin-page="dashboard">
+    <main
+      class="dsq-dashboard-wrapper admin-container"
+      aria-labelledby="dashboard-title"
+    >
+      <section class="dsq-card dsq-dashboard-card" aria-live="polite">
+        <header class="dsq-dashboard-header">
+          <div class="dsq-dashboard-header-content">
+            <h1 class="dsq-dashboard-title" id="dashboard-title">
+              Live quizdashboard
+            </h1>
+            <p class="dsq-dashboard-header-subtitle">
+              Volg realtime de voortgang van alle actieve quizsessies van het
+              Digitaal Veiligheidsrijbewijs.
+            </p>
+          </div>
+          <div class="admin-menu-wrapper dsq-dashboard-menu">
             <button
               class="admin-menu-toggle"
               type="button"
@@ -25,18 +37,24 @@
               <span class="admin-menu-bar"></span>
             </button>
             <nav class="admin-menu-dropdown" id="admin-menu" hidden>
-              <a class="admin-menu-link" href="database.html" data-page="database">Database</a>
-              <a class="admin-menu-link" href="categories.html" data-page="categories">Categorieën</a>
-              <a class="admin-menu-link" href="questions.html" data-page="questions">Vragen</a>
-              <a class="admin-menu-link" href="dashboard.html" data-page="dashboard">Live dashboard</a>
+              <a class="admin-menu-link" href="database.html" data-page="database"
+                >Database</a
+              >
+              <a class="admin-menu-link" href="categories.html" data-page="categories"
+                >Categorieën</a
+              >
+              <a class="admin-menu-link" href="questions.html" data-page="questions"
+                >Vragen</a
+              >
+              <a class="admin-menu-link" href="dashboard.html" data-page="dashboard"
+                >Live dashboard</a
+              >
             </nav>
           </div>
-          <h1>Live quizdashboard</h1>
+        </header>
+        <div class="dsq-dashboard-content">
+          <div id="dashboard"></div>
         </div>
-      </header>
-
-      <section class="admin-card">
-        <div id="dashboard"></div>
       </section>
     </main>
 
