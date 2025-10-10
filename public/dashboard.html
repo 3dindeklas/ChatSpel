@@ -29,6 +29,7 @@
               <a class="admin-menu-link" href="categories.html" data-page="categories">Categorieën</a>
               <a class="admin-menu-link" href="questions.html" data-page="questions">Vragen</a>
               <a class="admin-menu-link" href="dashboard.html" data-page="dashboard">Live dashboard</a>
+              <a class="admin-menu-link" href="school-session.html" data-page="sessions">Klas-sessies</a>
             </nav>
           </div>
           <h1>Live dashboard</h1>
@@ -37,15 +38,19 @@
       <section class="admin-card">
         <div id="dashboard"></div>
       </section>
+      <section class="admin-card" id="session-comparison" hidden>
+        <h2>Vergelijking met andere sessies</h2>
+        <p id="session-comparison-description" class="session-comparison-description"></p>
+        <div id="session-comparison-chart" class="session-comparison-chart"></div>
+        <p id="session-comparison-empty" class="session-comparison-empty" hidden>
+          Nog geen resultaten voor deze sessie vandaag.
+        </p>
+      </section>
     </main>
 
     <script src="../src/adminMenu.js" defer></script>
     <script src="../src/digitalSafetyQuiz.js"></script>
     <script src="../src/quizDashboard.js"></script>
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        createDigitalSafetyDashboard({ container: "#dashboard" });
-      });
-    </script>
+    <script src="../src/sessionDashboard.js" defer></script>
   </body>
 </html>

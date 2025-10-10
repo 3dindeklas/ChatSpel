@@ -25,6 +25,13 @@
   font-size: 1.05rem;
 }
 
+.dsq-session-info {
+  margin: 0.75rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2563eb;
+}
+
 .dsq-progress {
   margin-top: 1rem;
 }
@@ -609,3 +616,74 @@
   white-space: nowrap;
 }
 
+.session-access-body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e2e8f0, #f8fafc);
+  font-family: "Nunito", "Segoe UI", sans-serif;
+}
+
+.session-access-wrapper {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  align-items: stretch;
+}
+
+.session-access-card {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 2.5rem 2rem;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+  text-align: center;
+}
+
+.session-access-card h1 {
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+  color: #0f172a;
+}
+
+.session-access-lead {
+  font-size: 1.05rem;
+  color: #475569;
+  margin: 0;
+}
+
+.session-access-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 1.75rem;
+}
+
+.session-access-label {
+  font-weight: 600;
+  color: #1f2937;
+  text-align: left;
+}
+
+.session-access-error {
+  margin-top: 1.25rem;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.session-access-info {
+  margin-top: 1.25rem;
+  color: #047857;
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .session-access-card {
+    padding: 2rem 1.5rem;
+  }
+
+  .session-access-wrapper {
+    padding: 2rem 1.25rem;
+  }
+}

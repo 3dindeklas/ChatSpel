@@ -48,6 +48,18 @@ async function createSchema() {
   `);
 
   await runQuery(`
+    CREATE TABLE IF NOT EXISTS session_groups (
+      id TEXT PRIMARY KEY,
+      school_name TEXT NOT NULL,
+      group_name TEXT NOT NULL,
+      pass_key TEXT NOT NULL UNIQUE,
+      allowed_modules TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1
+    )
+  `);
+
+  await runQuery(`
     CREATE TABLE IF NOT EXISTS modules (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
@@ -100,7 +112,9 @@ async function createSchema() {
       start_time TEXT NOT NULL,
       end_time TEXT,
       last_seen TEXT NOT NULL,
-      summary TEXT
+      summary TEXT,
+      group_id TEXT,
+      FOREIGN KEY (group_id) REFERENCES session_groups(id) ON DELETE SET NULL
     )
   `);
 
@@ -117,6 +131,17 @@ async function createSchema() {
       FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE SET NULL
     )
   `);
+
+  try {
+    await runQuery(
+      "ALTER TABLE sessions ADD COLUMN group_id TEXT REFERENCES session_groups(id)"
+    );
+  } catch (error) {
+    const message = String(error?.message || "").toLowerCase();
+    if (!message.includes("duplicate") && !message.includes("exists")) {
+      throw error;
+    }
+  }
 }
 
 async function seedFromFile() {
@@ -211,7 +236,116 @@ async function initializeDatabase() {
   await seedFromFile();
 }
 
-async function getQuizConfig() {
+function parseAllowedModules(value) {
+  if (!value) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => String(entry || "").trim())
+      .filter((entry) => entry.length > 0);
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((entry) => String(entry || "").trim())
+        .filter((entry) => entry.length > 0);
+    }
+  } catch (error) {
+    /* val terug op lege lijst */
+  }
+
+  return [];
+}
+
+async function getSessionGroupById(id) {
+  if (!id) {
+    return null;
+  }
+
+  const row = await getQuery(
+    `SELECT id,
+            school_name AS schoolName,
+            group_name AS groupName,
+            pass_key AS passKey,
+            allowed_modules AS allowedModules,
+            created_at AS createdAt,
+            is_active AS isActive
+       FROM session_groups
+      WHERE id = ?`,
+    [id]
+  );
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    ...row,
+    allowedModules: parseAllowedModules(row.allowedModules)
+  };
+}
+
+async function getSessionGroupByPassKey(passKey) {
+  if (!passKey) {
+    return null;
+  }
+
+  const normalized = String(passKey || "")
+    .trim()
+    .toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  const row = await getQuery(
+    `SELECT id,
+            school_name AS schoolName,
+            group_name AS groupName,
+            pass_key AS passKey,
+            allowed_modules AS allowedModules,
+            created_at AS createdAt,
+            is_active AS isActive
+       FROM session_groups
+      WHERE lower(pass_key) = ?`,
+    [normalized]
+  );
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    ...row,
+    allowedModules: parseAllowedModules(row.allowedModules)
+  };
+}
+
+async function updateSessionGroupModules(id, moduleIds = []) {
+  if (!id) {
+    return null;
+  }
+
+  const sanitized = Array.isArray(moduleIds)
+    ? moduleIds
+        .map((entry) => String(entry || "").trim())
+        .filter((entry) => entry.length > 0)
+    : [];
+
+  await runQuery(
+    `UPDATE session_groups
+        SET allowed_modules = ?
+      WHERE id = ?`,
+    [JSON.stringify(sanitized), id]
+  );
+
+  return getSessionGroupById(id);
+}
+
+async function getQuizConfig(options = {}) {
   const settingsRows = await allQuery("SELECT key, value FROM quiz_settings");
   const settings = {};
   settingsRows.forEach(({ key, value }) => {
@@ -242,16 +376,16 @@ async function getQuizConfig() {
   }
 
   const questionIds = questions.map((question) => question.id);
-  let options = [];
+  let optionRows = [];
   if (questionIds.length) {
     const placeholderList = questionIds.map(() => "?").join(",");
-    options = await allQuery(
+    optionRows = await allQuery(
       `SELECT * FROM options WHERE question_id IN (${placeholderList}) ORDER BY position ASC`,
       questionIds
     );
   }
 
-  const optionMap = options.reduce((acc, option) => {
+  const optionMap = optionRows.reduce((acc, option) => {
     if (!acc[option.question_id]) {
       acc[option.question_id] = [];
     }
@@ -281,7 +415,7 @@ async function getQuizConfig() {
     return acc;
   }, {});
 
-  const normalizedModules = modules.map((module) => ({
+  let normalizedModules = modules.map((module) => ({
     id: module.id,
     title: module.title,
     intro: module.intro,
@@ -292,18 +426,34 @@ async function getQuizConfig() {
     questionPool: questionMap[module.id] || []
   }));
 
+  normalizedModules = normalizedModules.filter((module) => module.isActive);
+
+  if (options.sessionGroupId) {
+    const sessionGroup = await getSessionGroupById(options.sessionGroupId);
+    const allowed = sessionGroup?.allowedModules || [];
+    if (allowed.length) {
+      normalizedModules = normalizedModules.filter((module) =>
+        allowed.includes(module.id)
+      );
+    }
+  }
+
   return {
     title: settings.title || "",
     description: settings.description || "",
     certificateMessage: settings.certificateMessage || "",
     strings: settings.strings || {},
-    modules: normalizedModules.filter((module) => module.isActive)
+    modules: normalizedModules,
+    sessionGroupId: options.sessionGroupId || null
   };
 }
 
 module.exports = {
   initializeDatabase,
   getQuizConfig,
+  getSessionGroupById,
+  getSessionGroupByPassKey,
+  updateSessionGroupModules,
   db,
   runQuery,
   getQuery,

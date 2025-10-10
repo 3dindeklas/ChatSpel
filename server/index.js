@@ -8,6 +8,9 @@ const { randomUUID } = require("crypto");
 const {
   initializeDatabase,
   getQuizConfig,
+  getSessionGroupById,
+  getSessionGroupByPassKey,
+  updateSessionGroupModules,
   runQuery,
   allQuery,
   getQuery,
@@ -157,6 +160,86 @@ function normalizeModuleRow(row) {
   };
 }
 
+async function getAllModuleIds() {
+  const rows = await allQuery("SELECT id FROM modules");
+  return rows.map((row) => row.id);
+}
+
+function sanitizeModuleSelection(selectedIds = [], validIds = []) {
+  const validSet = new Set(validIds);
+  return (Array.isArray(selectedIds) ? selectedIds : [])
+    .map((value) => String(value || "").trim())
+    .filter((value) => value.length > 0 && validSet.has(value));
+}
+
+function generatePassKey() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let key = "";
+  for (let index = 0; index < 6; index += 1) {
+    const randomIndex = Math.floor(Math.random() * alphabet.length);
+    key += alphabet[randomIndex];
+  }
+  return key;
+}
+
+function extractModuleIdList(source) {
+  if (!source) {
+    return [];
+  }
+
+  if (Array.isArray(source)) {
+    return source;
+  }
+
+  if (typeof source === "string") {
+    return source
+      .split(",")
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+  }
+
+  return [];
+}
+
+async function getModulesByIds(ids = []) {
+  const uniqueIds = Array.from(new Set(ids));
+  if (!uniqueIds.length) {
+    return [];
+  }
+
+  const placeholders = uniqueIds.map(() => "?").join(",");
+  const rows = await allQuery(
+    `SELECT id, title
+       FROM modules
+      WHERE id IN (${placeholders})
+      ORDER BY position ASC`,
+    uniqueIds
+  );
+
+  return rows.map((row) => ({ id: row.id, title: row.title }));
+}
+
+async function buildSessionGroupResponse(group) {
+  if (!group) {
+    return null;
+  }
+
+  const allowedModules = Array.isArray(group.allowedModules)
+    ? group.allowedModules
+    : [];
+  const modules = await getModulesByIds(allowedModules);
+  return {
+    id: group.id,
+    schoolName: group.schoolName,
+    groupName: group.groupName,
+    passKey: group.passKey,
+    allowedModules,
+    modules,
+    createdAt: group.createdAt,
+    isActive: Boolean(group.isActive)
+  };
+}
+
 async function getNextModulePosition() {
   const row = await getQuery(
     "SELECT COALESCE(MAX(position), -1) AS maxPosition FROM modules"
@@ -216,7 +299,20 @@ async function saveQuestionOptions(questionId, options) {
 app.get(
   "/api/quiz-config",
   asyncHandler(async (req, res) => {
-    const config = await getQuizConfig();
+    const sessionGroupId = (() => {
+      const raw =
+        req.query?.sessionGroupId ||
+        req.query?.session_group_id ||
+        req.query?.groupId ||
+        req.query?.group_id;
+      if (!raw) {
+        return null;
+      }
+      const trimmed = String(raw).trim();
+      return trimmed.length ? trimmed : null;
+    })();
+
+    const config = await getQuizConfig({ sessionGroupId });
     res.json(config);
   })
 );
@@ -346,6 +442,140 @@ app.delete(
 
     await runQuery("DELETE FROM modules WHERE id = ?", [moduleId]);
     res.status(204).send();
+  })
+);
+
+app.post(
+  "/api/session-groups",
+  asyncHandler(async (req, res) => {
+    const schoolName = (req.body?.schoolName || "").trim();
+    const groupName = (req.body?.groupName || "").trim();
+    const moduleInput =
+      req.body?.moduleIds || req.body?.modules || req.body?.allowedModules;
+    const requestedModules = extractModuleIdList(moduleInput);
+
+    if (!schoolName || !groupName) {
+      res.status(400).json({
+        message: "Vul de schoolnaam en groepsnaam in"
+      });
+      return;
+    }
+
+    const availableModuleIds = await getAllModuleIds();
+    if (!availableModuleIds.length) {
+      res.status(400).json({
+        message: "Er zijn geen vraaggroepen beschikbaar"
+      });
+      return;
+    }
+
+    let allowedModules = sanitizeModuleSelection(
+      requestedModules,
+      availableModuleIds
+    );
+    if (!allowedModules.length) {
+      allowedModules = availableModuleIds;
+    }
+
+    let passKey;
+    let attempts = 0;
+    do {
+      passKey = generatePassKey();
+      const existing = await getSessionGroupByPassKey(passKey);
+      if (!existing) {
+        break;
+      }
+      attempts += 1;
+    } while (attempts < 10);
+
+    if (!passKey) {
+      res.status(500).json({ message: "Kon geen toegangscode genereren" });
+      return;
+    }
+
+    const id = randomUUID();
+    const createdAt = new Date().toISOString();
+
+    await runQuery(
+      `INSERT INTO session_groups (id, school_name, group_name, pass_key, allowed_modules, created_at, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, 1)`,
+      [id, schoolName, groupName, passKey, JSON.stringify(allowedModules), createdAt]
+    );
+
+    const created = await getSessionGroupById(id);
+    res.status(201).json(await buildSessionGroupResponse(created));
+  })
+);
+
+app.get(
+  "/api/session-groups/passkey/:passKey",
+  asyncHandler(async (req, res) => {
+    const passKey = (req.params.passKey || "").trim();
+    if (!passKey) {
+      res.status(400).json({ message: "Ongeldige toegangscode" });
+      return;
+    }
+
+    const group = await getSessionGroupByPassKey(passKey);
+    if (!group || group.isActive === 0 || group.isActive === false) {
+      res.status(404).json({ message: "Toegangscode niet gevonden" });
+      return;
+    }
+
+    res.json(await buildSessionGroupResponse(group));
+  })
+);
+
+app.get(
+  "/api/session-groups/:id",
+  asyncHandler(async (req, res) => {
+    const groupId = req.params.id;
+    const group = await getSessionGroupById(groupId);
+    if (!group) {
+      res.status(404).json({ message: "Sessie niet gevonden" });
+      return;
+    }
+
+    res.json(await buildSessionGroupResponse(group));
+  })
+);
+
+app.put(
+  "/api/session-groups/:id/modules",
+  asyncHandler(async (req, res) => {
+    const groupId = req.params.id;
+    const group = await getSessionGroupById(groupId);
+    if (!group) {
+      res.status(404).json({ message: "Sessie niet gevonden" });
+      return;
+    }
+
+    const moduleInput =
+      req.body?.moduleIds || req.body?.modules || req.body?.allowedModules;
+    const requestedModules = extractModuleIdList(moduleInput);
+
+    const availableModuleIds = await getAllModuleIds();
+    if (!availableModuleIds.length) {
+      res.status(400).json({
+        message: "Er zijn geen vraaggroepen beschikbaar"
+      });
+      return;
+    }
+
+    const allowedModules = sanitizeModuleSelection(
+      requestedModules,
+      availableModuleIds
+    );
+
+    if (!allowedModules.length) {
+      res.status(400).json({
+        message: "Selecteer minstens één vraaggroep"
+      });
+      return;
+    }
+
+    const updated = await updateSessionGroupModules(groupId, allowedModules);
+    res.json(await buildSessionGroupResponse(updated));
   })
 );
 
@@ -623,14 +853,22 @@ app.post(
   asyncHandler(async (req, res) => {
     const name = req.body?.name || null;
     const requestedId = req.body?.id;
+    const groupId = req.body?.groupId ? String(req.body.groupId).trim() : null;
+    if (groupId) {
+      const group = await getSessionGroupById(groupId);
+      if (!group) {
+        res.status(400).json({ message: "Ongeldige sessiegroep" });
+        return;
+      }
+    }
     const now = new Date();
     const id = requestedId || randomUUID();
     const iso = now.toISOString();
 
     await runQuery(
-      `INSERT INTO sessions (id, name, status, start_time, last_seen)
-       VALUES (?, ?, 'active', ?, ?)`,
-      [id, name, iso, iso]
+      `INSERT INTO sessions (id, name, status, start_time, last_seen, group_id)
+       VALUES (?, ?, 'active', ?, ?, ?)`,
+      [id, name, iso, iso, groupId]
     );
 
     res.status(201).json({
@@ -638,7 +876,8 @@ app.post(
       name,
       status: "active",
       startTime: iso,
-      lastSeen: iso
+      lastSeen: iso,
+      groupId
     });
   })
 );
@@ -749,6 +988,28 @@ app.delete(
 app.get(
   "/api/dashboard",
   asyncHandler(async (req, res) => {
+    const requestedGroupId = (() => {
+      const raw =
+        req.query?.groupId ||
+        req.query?.group_id ||
+        req.query?.sessionGroupId ||
+        req.query?.session_group_id;
+      if (!raw) {
+        return null;
+      }
+      const trimmed = String(raw).trim();
+      return trimmed.length ? trimmed : null;
+    })();
+
+    let groupInfo = null;
+    if (requestedGroupId) {
+      groupInfo = await getSessionGroupById(requestedGroupId);
+      if (!groupInfo) {
+        res.status(404).json({ message: "Sessie niet gevonden" });
+        return;
+      }
+    }
+
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
     const startIso = startOfDay.toISOString();
@@ -758,58 +1019,74 @@ app.get(
       [startIso]
     );
 
-    if (!sessions.length) {
-      res.json({
-        totalSessions: 0,
-        totalCorrect: 0,
-        totalIncorrect: 0,
-        activeParticipants: 0,
-        activeSessions: []
-      });
-      return;
-    }
-
     const sessionIds = sessions.map((session) => session.id);
-    const attemptRows = await allQuery(
-      `SELECT session_id AS sessionId,
-              SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) AS correct,
-              SUM(CASE WHEN is_correct = 0 THEN 1 ELSE 0 END) AS incorrect
-       FROM session_attempts
-       WHERE session_id IN (${sessionIds.map(() => "?").join(",")})
-       GROUP BY session_id`,
-      sessionIds
-    );
+    let attemptsMap = {};
+    if (sessionIds.length) {
+      const attemptRows = await allQuery(
+        `SELECT session_id AS sessionId,
+                SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) AS correct,
+                SUM(CASE WHEN is_correct = 0 THEN 1 ELSE 0 END) AS incorrect
+         FROM session_attempts
+         WHERE session_id IN (${sessionIds.map(() => "?").join(",")})
+         GROUP BY session_id`,
+        sessionIds
+      );
 
-    const attemptsMap = attemptRows.reduce((acc, row) => {
-      const sessionId = row.sessionId || row.session_id || row.sessionid;
-      if (!sessionId) {
+      attemptsMap = attemptRows.reduce((acc, row) => {
+        const sessionId = row.sessionId || row.session_id || row.sessionid;
+        if (!sessionId) {
+          return acc;
+        }
+
+        const correct = Number(
+          row.correct ?? row.correct_attempts ?? row.correctattempts ?? 0
+        );
+        const incorrect = Number(
+          row.incorrect ?? row.incorrect_attempts ?? row.incorrectattempts ?? 0
+        );
+
+        acc[sessionId] = {
+          correct: Number.isFinite(correct) ? correct : 0,
+          incorrect: Number.isFinite(incorrect) ? incorrect : 0
+        };
         return acc;
-      }
-
-      const correct = Number(
-        row.correct ?? row.correct_attempts ?? row.correctattempts ?? 0
-      );
-      const incorrect = Number(
-        row.incorrect ?? row.incorrect_attempts ?? row.incorrectattempts ?? 0
-      );
-
-      acc[sessionId] = {
-        correct: Number.isFinite(correct) ? correct : 0,
-        incorrect: Number.isFinite(incorrect) ? incorrect : 0
-      };
-      return acc;
-    }, {});
+      }, {});
+    }
 
     const cutoff = new Date(Date.now() - SESSION_TIMEOUT_MS).toISOString();
 
     let totalCorrect = 0;
     let totalIncorrect = 0;
+    let countedSessions = 0;
     const activeSessions = [];
+
+    const comparison = requestedGroupId
+      ? {
+          current: { correct: 0, incorrect: 0, participants: 0 },
+          others: { correct: 0, incorrect: 0, participants: 0 }
+        }
+      : null;
 
     sessions.forEach((session) => {
       const stats = attemptsMap[session.id] || { correct: 0, incorrect: 0 };
+      const matchesGroup = requestedGroupId
+        ? session.group_id === requestedGroupId
+        : true;
+
+      if (comparison) {
+        const bucket = matchesGroup ? comparison.current : comparison.others;
+        bucket.correct += stats.correct;
+        bucket.incorrect += stats.incorrect;
+        bucket.participants += 1;
+      }
+
+      if (!matchesGroup) {
+        return;
+      }
+
       totalCorrect += stats.correct;
       totalIncorrect += stats.incorrect;
+      countedSessions += 1;
 
       if (
         session.status === "active" &&
@@ -822,18 +1099,54 @@ app.get(
           correct: stats.correct,
           incorrect: stats.incorrect,
           startTime: session.start_time,
-          lastSeen: session.last_seen
+          lastSeen: session.last_seen,
+          groupId: session.group_id
         });
       }
     });
 
-    res.json({
-      totalSessions: sessions.length,
+    const response = {
+      totalSessions: requestedGroupId ? countedSessions : sessions.length,
       totalCorrect,
       totalIncorrect,
       activeParticipants: activeSessions.length,
       activeSessions
-    });
+    };
+
+    if (comparison && groupInfo) {
+      response.group = {
+        id: groupInfo.id,
+        schoolName: groupInfo.schoolName,
+        groupName: groupInfo.groupName,
+        passKey: groupInfo.passKey
+      };
+      response.comparison = {
+        current: {
+          correct: comparison.current.correct,
+          incorrect: comparison.current.incorrect,
+          participants: comparison.current.participants
+        },
+        others: {
+          correct: comparison.others.correct,
+          incorrect: comparison.others.incorrect,
+          participants: comparison.others.participants
+        },
+        series: [
+          {
+            label: "Huidige sessie",
+            correct: comparison.current.correct,
+            incorrect: comparison.current.incorrect
+          },
+          {
+            label: "Overige sessies",
+            correct: comparison.others.correct,
+            incorrect: comparison.others.incorrect
+          }
+        ]
+      };
+    }
+
+    res.json(response);
   })
 );
 

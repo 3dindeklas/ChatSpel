@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Klas-sessies beheren</title>
+    <link rel="stylesheet" href="../styles/admin.css" />
+    <link rel="stylesheet" href="../styles/digitalSafetyQuiz.css" />
+  </head>
+  <body data-admin-page="sessions">
+    <main class="admin-container">
+      <header class="admin-header">
+        <div class="admin-title-group">
+          <div class="admin-menu-wrapper">
+            <button
+              class="admin-menu-toggle"
+              type="button"
+              aria-label="Open navigatie"
+              aria-expanded="false"
+              aria-controls="admin-menu"
+            >
+              <span class="sr-only">Open navigatie</span>
+              <span class="admin-menu-bar"></span>
+              <span class="admin-menu-bar"></span>
+              <span class="admin-menu-bar"></span>
+            </button>
+            <nav class="admin-menu-dropdown" id="admin-menu" hidden>
+              <a class="admin-menu-link" href="database.html" data-page="database"
+                >Database</a
+              >
+              <a class="admin-menu-link" href="categories.html" data-page="categories"
+                >Categorieën</a
+              >
+              <a class="admin-menu-link" href="questions.html" data-page="questions"
+                >Vragen</a
+              >
+              <a class="admin-menu-link" href="dashboard.html" data-page="dashboard"
+                >Live dashboard</a
+              >
+              <a class="admin-menu-link" href="school-session.html" data-page="sessions"
+                >Klas-sessies</a
+              >
+            </nav>
+          </div>
+          <h1>Klas-sessies</h1>
+        </div>
+      </header>
+
+      <section class="admin-card">
+        <h2>Start een nieuwe klas-sessie</h2>
+        <p class="admin-intro">
+          Vul hieronder de gegevens van jouw school en groep in. Je ontvangt direct
+          een toegangscode voor de leerlingen en kunt kiezen welke vraaggroepen
+          beschikbaar zijn.
+        </p>
+        <form id="session-group-form" class="session-group-form">
+          <div class="session-group-field">
+            <label for="session-group-school">School</label>
+            <input
+              id="session-group-school"
+              name="schoolName"
+              type="text"
+              class="dsq-input"
+              placeholder="Naam van de school"
+              required
+            />
+          </div>
+          <div class="session-group-field">
+            <label for="session-group-name">Groep / klas</label>
+            <input
+              id="session-group-name"
+              name="groupName"
+              type="text"
+              class="dsq-input"
+              placeholder="Bijvoorbeeld groep 7A"
+              required
+            />
+          </div>
+          <fieldset class="session-group-fieldset">
+            <legend>Vraaggroepen</legend>
+            <p class="session-group-hint">
+              Kies welke vraaggroepen voor deze sessie beschikbaar zijn. Standaard
+              staan alle groepen aan.
+            </p>
+            <div id="session-group-form-modules" class="session-group-module-grid"></div>
+          </fieldset>
+          <div class="session-group-actions">
+            <button type="submit" class="dsq-button">Maak toegangscode</button>
+          </div>
+        </form>
+        <p id="session-group-error" class="session-group-error" hidden></p>
+      </section>
+
+      <section class="admin-card" id="session-group-details" hidden>
+        <h2>Toegangscode voor de klas</h2>
+        <p class="session-group-passkey">
+          <span>Code:</span>
+          <code id="session-group-passkey"></code>
+          <button type="button" id="session-group-copy" class="dsq-button-secondary">
+            Kopieer code
+          </button>
+        </p>
+        <dl class="session-group-summary">
+          <div>
+            <dt>School</dt>
+            <dd id="session-group-summary-school"></dd>
+          </div>
+          <div>
+            <dt>Groep</dt>
+            <dd id="session-group-summary-group"></dd>
+          </div>
+        </dl>
+        <div class="session-group-modules">
+          <h3>Vraaggroepen voor deze sessie</h3>
+          <p class="session-group-hint">
+            Zet vraaggroepen aan of uit. Leerlingen zien alleen de ingeschakelde
+            groepen wanneer ze de quiz starten met deze code.
+          </p>
+          <ul id="session-group-module-list" class="session-group-module-list"></ul>
+          <p id="session-group-module-error" class="session-group-error" hidden></p>
+          <p id="session-group-module-status" class="session-group-status" hidden></p>
+        </div>
+        <div class="session-group-actions">
+          <a
+            id="session-group-dashboard-link"
+            class="dsq-button"
+            target="_blank"
+            rel="noopener"
+            href="dashboard.html"
+            >Open live dashboard</a
+          >
+        </div>
+      </section>
+    </main>
+
+    <script src="../src/adminMenu.js" defer></script>
+    <script src="../src/sessionGroupManager.js" defer></script>
+  </body>
+</html>
