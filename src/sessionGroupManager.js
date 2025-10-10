@@ -184,12 +184,13 @@
       }
 
       showMessage(errorEl, "");
-      setFormDisabled(true);
 
       const formData = new FormData(form);
       const schoolName = String(formData.get("schoolName") || "").trim();
       const groupName = String(formData.get("groupName") || "").trim();
       const selectedModuleIds = getSelectedModuleIds(modulesContainer);
+
+      setFormDisabled(true);
 
       try {
         const createdGroup = await fetchJson("/api/session-groups", {
