@@ -6,18 +6,11 @@
       ? new Intl.DateTimeFormat("nl-NL", { dateStyle: "long" })
       : null;
 
-  function createElement(tag, options = {}) {
-    const element = document.createElement(tag);
-    if (options.className) {
-      element.className = options.className;
-    }
-    if (options.text) {
-      element.textContent = options.text;
-    }
-    if (options.html) {
-      element.innerHTML = options.html;
-    }
-    return element;
+  const adminUI = (window.ChatSpel && window.ChatSpel.adminUI) || {};
+  const { createElement } = adminUI;
+
+  if (typeof createElement !== "function") {
+    throw new Error("Admin UI helpers zijn niet geladen");
   }
 
   async function fetchDatabaseInfo() {
