@@ -6,39 +6,44 @@
     <title>Digitaal Veiligheidsrijbewijs</title>
     <link rel="stylesheet" href="../styles/digitalSafetyQuiz.css" />
   </head>
-  <body>
-    <div id="quiz"></div>
+  <body class="session-access-body">
+    <main class="session-access-wrapper">
+      <section class="session-access-card" id="session-access">
+        <h1>Start de quiz</h1>
+        <p class="session-access-lead">
+          Vul de toegangscode van jouw klas in om te beginnen met de quiz.
+        </p>
+        <form id="session-access-form" class="session-access-form">
+          <label class="session-access-label" for="session-access-key"
+            >Toegangscode</label
+          >
+          <input
+            id="session-access-key"
+            class="dsq-input"
+            type="text"
+            name="passKey"
+            placeholder="Bijvoorbeeld ABC123"
+            autocomplete="one-time-code"
+            required
+          />
+          <button type="submit" class="dsq-button">Ga naar de quiz</button>
+        </form>
+        <p
+          id="session-access-error"
+          class="session-access-error"
+          role="alert"
+          hidden
+        ></p>
+        <p id="session-access-info" class="session-access-info" hidden></p>
+      </section>
+      <div id="quiz" hidden></div>
+    </main>
 
     <script
       src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"
       defer
     ></script>
-    <script src="../src/digitalSafetyQuiz.js"></script>
-    <script>
-      document.addEventListener("DOMContentLoaded", async function () {
-        const container = document.querySelector("#quiz");
-        if (container) {
-          container.textContent = "Quiz wordt geladen...";
-        }
-
-        try {
-          const response = await fetch("/api/quiz-config");
-          if (!response.ok) {
-            throw new Error("Kon configuratie niet laden");
-          }
-          const config = await response.json();
-          new DigitalSafetyQuiz({
-            container: "#quiz",
-            config,
-            apiBaseUrl: ""
-          });
-        } catch (error) {
-          if (container) {
-            container.textContent =
-              "De quiz kon niet worden geladen. Probeer het later opnieuw.";
-          }
-        }
-      });
-    </script>
+    <script src="../src/digitalSafetyQuiz.js" defer></script>
+    <script src="../src/sessionAccess.js" defer></script>
   </body>
 </html>

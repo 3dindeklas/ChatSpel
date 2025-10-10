@@ -558,7 +558,8 @@
         method: "POST",
         body: JSON.stringify({
           id: session.id,
-          name: session.name
+          name: session.name,
+          groupId: session.groupId || undefined
         })
       }).then(() => {
         this._refreshRemoteSnapshot();
@@ -720,7 +721,7 @@
       }
     }
 
-    createSession(name) {
+    createSession(name, metadata = {}) {
       const now = new Date();
       const dateKey = this._getDateKey(now);
       const session = {
@@ -732,7 +733,11 @@
         attempts: [],
         stats: { correct: 0, incorrect: 0 },
         summary: null,
-        lastUpdated: now.toISOString()
+        lastUpdated: now.toISOString(),
+        groupId:
+          typeof metadata.groupId === "string"
+            ? metadata.groupId.trim()
+            : metadata.groupId || null
       };
 
       this._saveByKey(dateKey, { sessions: [session] });
@@ -1049,6 +1054,16 @@
           : globalDefaults.apiBaseUrl;
       this.apiBaseUrl = normalizeBaseUrl(providedApiBaseUrl || "");
       this.config = normalizeConfig(options.config);
+      const sessionGroupOption = options.sessionGroup || null;
+      this.sessionGroupId =
+        options.sessionGroupId ||
+        (sessionGroupOption && sessionGroupOption.id) ||
+        this.config.sessionGroupId ||
+        null;
+      this.sessionGroup =
+        sessionGroupOption && typeof sessionGroupOption === "object"
+          ? sessionGroupOption
+          : null;
       this.container =
         typeof options.container === "string"
           ? document.querySelector(options.container)
@@ -1094,6 +1109,25 @@
       this.progressEl = createElement("div", { className: "dsq-progress" });
 
       this.headerEl.append(titleEl, descEl, this.progressEl);
+
+      if (
+        this.sessionGroupId &&
+        this.sessionGroup &&
+        (this.sessionGroup.schoolName || this.sessionGroup.groupName)
+      ) {
+        const schoolName = this.sessionGroup.schoolName || "";
+        const groupName = this.sessionGroup.groupName || "";
+        const infoText = [schoolName, groupName]
+          .filter((part) => part && part.length)
+          .join(" – ");
+        if (infoText) {
+          this.sessionInfoEl = createElement("p", {
+            className: "dsq-session-info",
+            text: `Sessie voor: ${infoText}`
+          });
+          this.headerEl.append(this.sessionInfoEl);
+        }
+      }
 
       this.mainEl = createElement("main", { className: "dsq-main" });
       this.footerEl = createElement("footer", { className: "dsq-footer" });
@@ -1222,7 +1256,9 @@
 
       this.sessionResults = new Map();
       this.sessionCompleted = false;
-      const session = this.sessionStore.createSession(this.participantName);
+      const session = this.sessionStore.createSession(this.participantName, {
+        groupId: this.sessionGroupId
+      });
       this.sessionId = session?.id || null;
       if (this.sessionStore && this.sessionId && this.sessionStore.startHeartbeat) {
         this.heartbeatStopper = this.sessionStore.startHeartbeat(this.sessionId);
