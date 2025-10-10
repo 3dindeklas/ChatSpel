@@ -33,9 +33,28 @@
       return 0;
     }
 
-    const numericCount = Number(category.questionCount);
-    if (Number.isFinite(numericCount) && numericCount >= 0) {
-      return numericCount;
+    const countCandidates = [
+      category.questionCount,
+      category.question_count,
+      category.questioncount,
+      category.questionsCount,
+      category.questions_count,
+      category.questionscount
+    ];
+
+    for (const candidate of countCandidates) {
+      if (candidate === undefined || candidate === null || candidate === "") {
+        continue;
+      }
+
+      const numericCount = Number(candidate);
+      if (Number.isFinite(numericCount) && numericCount >= 0) {
+        return numericCount;
+      }
+    }
+
+    if (Array.isArray(category.questionPool)) {
+      return category.questionPool.length;
     }
 
     if (Array.isArray(category.questions)) {
