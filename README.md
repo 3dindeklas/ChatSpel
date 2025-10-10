@@ -28,6 +28,10 @@ Deze repository bevat een kant-en-klare quizmodule die je kunt insluiten op bijv
 
 Tijdens ontwikkeling kun je ook `npm run dev` gebruiken voor automatische herstart bij codewijzigingen.
 
+## Testplan
+
+Zie [TESTING.md](TESTING.md) voor het actuele testplan met automatische controles, handmatige regressietests en een releasechecklist. Vul dit document aan wanneer er nieuwe functionaliteit of scripts bijkomen.
+
 ## Configuratie
 
 De server leest instellingen uit environment-variabelen. Plaats ze lokaal in een `.env`-bestand en configureer ze op Render via het **Environment**-tabblad.
