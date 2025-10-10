@@ -1,44 +1,17 @@
 (function () {
   "use strict";
 
-  function createElement(tag, options = {}) {
-    const element = document.createElement(tag);
-    if (options.className) {
-      element.className = options.className;
-    }
-    if (options.text) {
-      element.textContent = options.text;
-    }
-    if (options.html) {
-      element.innerHTML = options.html;
-    }
-    if (options.attrs) {
-      Object.entries(options.attrs).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          element.setAttribute(key, value);
-        }
-      });
-    }
-    return element;
-  }
+  const adminUI = (window.ChatSpel && window.ChatSpel.adminUI) || {};
+  const {
+    createElement,
+    createIcon,
+    showFeedback,
+    clearFeedback,
+    setListVisibility
+  } = adminUI;
 
-  const ICON_SVGS = {
-    edit:
-      '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15.232 5.232a2.5 2.5 0 0 0-3.536 0l-7.5 7.5a1 1 0 0 0-.263.465l-1 3.5a1 1 0 0 0 1.263 1.263l3.5-1a1 1 0 0 0 .465-.263l7.5-7.5a2.5 2.5 0 0 0 0-3.536l-1.5-1.5Zm-2.122 1.414 1.5 1.5-6.95 6.95-1.5-1.5 6.95-6.95Z"/><path d="M5.586 17H4a1 1 0 0 1-1-1v-1.586a1 1 0 0 1 .293-.707l2 2a1 1 0 0 1-.707.293Z"/></svg>',
-    delete:
-      '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2h3a1 1 0 1 1 0 2h-1v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6H3a1 1 0 1 1 0-2h4Zm6 2H7v11h6V6Zm-4 3a1 1 0 0 1 2 0v5a1 1 0 1 1-2 0V9Zm4 0a1 1 0 0 1 2 0v5a1 1 0 0 1-2 0V9Z"/></svg>'
-  };
-
-  function createIcon(type) {
-    const svg = ICON_SVGS[type];
-    if (!svg) {
-      return null;
-    }
-    const wrapper = document.createElement("span");
-    wrapper.className = "admin-button__icon";
-    wrapper.setAttribute("aria-hidden", "true");
-    wrapper.innerHTML = svg;
-    return wrapper;
+  if (typeof createElement !== "function") {
+    throw new Error("Admin UI helpers zijn niet geladen");
   }
 
   function formatType(type) {
@@ -56,23 +29,6 @@
     return response.json();
   }
 
-  function showFeedback(container, message, variant = "error") {
-    if (!container) {
-      return;
-    }
-    container.innerHTML = "";
-    const box = createElement("div", {
-      className: variant === "error" ? "admin-error" : "admin-success",
-      text: message
-    });
-    container.append(box);
-  }
-
-  function clearFeedback(container) {
-    if (container) {
-      container.innerHTML = "";
-    }
-  }
 
   function resolveModuleTitle(question) {
     if (!question || typeof question !== "object") {
@@ -91,14 +47,11 @@
     const tbody = table.querySelector("tbody");
     tbody.innerHTML = "";
 
+    setListVisibility(table, emptyState, questions);
+
     if (!Array.isArray(questions) || !questions.length) {
-      table.hidden = true;
-      emptyState.hidden = false;
       return;
     }
-
-    emptyState.hidden = true;
-    table.hidden = false;
 
     questions.forEach((question) => {
       const row = document.createElement("tr");
