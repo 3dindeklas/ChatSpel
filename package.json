@@ -5,7 +5,10 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "dev": "nodemon server/index.js"
+    "dev": "nodemon server/index.js",
+    "lint": "node scripts/syntax-check.js",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -15,6 +18,7 @@
     "sqlite3": "^5.1.6"
   },
   "devDependencies": {
+    "jest": "^29.7.0",
     "nodemon": "^3.0.2"
   }
 }

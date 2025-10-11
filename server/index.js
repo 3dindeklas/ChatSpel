@@ -6,6 +6,15 @@ const cors = require("cors");
 const { randomUUID } = require("crypto");
 
 const {
+  sanitizeOptions,
+  normalizeBoolean,
+  extractQuestionsPerSessionField,
+  parseQuestionsPerSession,
+  sanitizeModuleSelection,
+  extractModuleIdList
+} = require("./utils");
+
+const {
   initializeDatabase,
   getQuizConfig,
   getSessionGroupById,
@@ -32,84 +41,6 @@ function asyncHandler(fn) {
   return (req, res, next) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
-}
-
-function sanitizeOptions(options = []) {
-  if (!Array.isArray(options)) {
-    return [];
-  }
-  return options
-    .map((option) => ({
-      id: option.id || randomUUID(),
-      label: option.label || "",
-      isCorrect: Boolean(option.isCorrect || option.is_correct)
-    }))
-    .filter((option) => option.label.trim().length > 0);
-}
-
-function normalizeBoolean(value, fallback) {
-  if (value === undefined || value === null) {
-    if (fallback === undefined) {
-      return false;
-    }
-    return Boolean(fallback);
-  }
-
-  if (typeof value === "string") {
-    const lowered = value.trim().toLowerCase();
-    if (["true", "1", "yes", "aan"].includes(lowered)) {
-      return true;
-    }
-    if (["false", "0", "no", "nee", "uit"].includes(lowered)) {
-      return false;
-    }
-  }
-
-  return Boolean(value);
-}
-
-function extractQuestionsPerSessionField(source) {
-  if (!source || typeof source !== "object") {
-    return undefined;
-  }
-
-  const candidates = [
-    source.questionsPerSession,
-    source.questions_per_session,
-    source.questions,
-    source.questionspersession
-  ];
-
-  for (const candidate of candidates) {
-    if (candidate === undefined || candidate === null || candidate === "") {
-      continue;
-    }
-
-    if (Array.isArray(candidate)) {
-      continue;
-    }
-
-    return candidate;
-  }
-
-  return undefined;
-}
-
-function parseQuestionsPerSession(value, fallback) {
-  if (value === undefined || value === null || value === "") {
-    return fallback;
-  }
-
-  let numericValue = value;
-  if (typeof numericValue === "string") {
-    numericValue = numericValue.replace(/,/g, ".");
-  }
-
-  const numeric = Number.parseFloat(numericValue);
-  if (!Number.isFinite(numeric) || numeric <= 0) {
-    return fallback;
-  }
-  return Math.floor(numeric);
 }
 
 function normalizeModuleRow(row) {
@@ -165,13 +96,6 @@ async function getAllModuleIds() {
   return rows.map((row) => row.id);
 }
 
-function sanitizeModuleSelection(selectedIds = [], validIds = []) {
-  const validSet = new Set(validIds);
-  return (Array.isArray(selectedIds) ? selectedIds : [])
-    .map((value) => String(value || "").trim())
-    .filter((value) => value.length > 0 && validSet.has(value));
-}
-
 function generatePassKey() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let key = "";
@@ -180,25 +104,6 @@ function generatePassKey() {
     key += alphabet[randomIndex];
   }
   return key;
-}
-
-function extractModuleIdList(source) {
-  if (!source) {
-    return [];
-  }
-
-  if (Array.isArray(source)) {
-    return source;
-  }
-
-  if (typeof source === "string") {
-    return source
-      .split(",")
-      .map((value) => value.trim())
-      .filter((value) => value.length > 0);
-  }
-
-  return [];
 }
 
 async function getModulesByIds(ids = []) {
@@ -1156,15 +1061,27 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: "Er is iets misgegaan" });
 });
 
-initializeDatabase()
-  .then(() => {
-    app.listen(PORT, () => {
+async function startServer() {
+  try {
+    await initializeDatabase();
+    return app.listen(PORT, () => {
       // eslint-disable-next-line no-console
       console.log(`Server gestart op poort ${PORT}`);
     });
-  })
-  .catch((error) => {
+  } catch (error) {
     // eslint-disable-next-line no-console
     console.error("Database-initialisatie mislukt", error);
+    throw error;
+  }
+}
+
+if (require.main === module) {
+  startServer().catch(() => {
     process.exit(1);
   });
+}
+
+module.exports = {
+  app,
+  startServer
+};
