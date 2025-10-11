@@ -285,23 +285,52 @@
       }
     });
 
+    async function tryCopyToClipboard(text) {
+      if (!text) {
+        return false;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch (error) {
+          /* negeer en probeer fallback */
+        }
+      }
+
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "absolute";
+        textarea.style.left = "-9999px";
+        document.body.append(textarea);
+        textarea.select();
+        const success = document.execCommand("copy");
+        textarea.remove();
+        return success;
+      } catch (error) {
+        return false;
+      }
+    }
+
     if (copyButton) {
       copyButton.addEventListener("click", async () => {
         const passKey = currentGroup?.passKey;
         if (!passKey) {
           return;
         }
-        try {
-          if (navigator.clipboard?.writeText) {
-            await navigator.clipboard.writeText(passKey);
-            copyButton.textContent = "Gekopieerd!";
-            window.setTimeout(() => {
-              copyButton.textContent = "Kopieer code";
-            }, 2500);
-          }
-        } catch (error) {
-          /* negeer kopieer fouten */
-        }
+
+        const originalLabel = copyButton.textContent;
+        copyButton.disabled = true;
+        const success = await tryCopyToClipboard(passKey);
+        copyButton.disabled = false;
+        copyButton.textContent = success ? "Gekopieerd!" : "Kopieer handmatig";
+
+        window.setTimeout(() => {
+          copyButton.textContent = originalLabel;
+        }, success ? 2000 : 3000);
       });
     }
   });

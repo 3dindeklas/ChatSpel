@@ -57,6 +57,45 @@
     return { wrapper, valueEl, labelEl };
   }
 
+  function createCopyButton() {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "session-dashboard-passkey-copy dsq-button-secondary";
+    button.textContent = "Kopieer code";
+    button.disabled = true;
+    return button;
+  }
+
+  async function copyToClipboard(text) {
+    if (!text) {
+      return false;
+    }
+
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (error) {
+        /* negeer en probeer fallback */
+      }
+    }
+
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "absolute";
+      textarea.style.left = "-9999px";
+      document.body.append(textarea);
+      textarea.select();
+      const success = document.execCommand("copy");
+      textarea.remove();
+      return success;
+    } catch (error) {
+      return false;
+    }
+  }
+
   function renderGroupDashboard(container) {
     container.innerHTML = "";
 
@@ -66,14 +105,26 @@
     const header = document.createElement("div");
     header.className = "session-dashboard-header";
 
+    const passKeyWrapper = document.createElement("div");
+    passKeyWrapper.className = "session-dashboard-passkey";
+
+    const passKeyLabel = document.createElement("span");
+    passKeyLabel.className = "session-dashboard-passkey-label";
+    passKeyLabel.textContent = "Toegangscode:";
+
+    const passKeyValue = document.createElement("code");
+    passKeyValue.className = "session-dashboard-passkey-value";
+    passKeyValue.textContent = "—";
+
+    const passKeyButton = createCopyButton();
+
+    passKeyWrapper.append(passKeyLabel, passKeyValue, passKeyButton);
+
     const titleEl = document.createElement("h2");
     titleEl.className = "session-dashboard-title";
     titleEl.textContent = "Sessiestatistieken";
 
-    const passKeyEl = document.createElement("p");
-    passKeyEl.className = "session-dashboard-passkey";
-
-    header.append(titleEl, passKeyEl);
+    header.append(passKeyWrapper, titleEl);
 
     const metricsWrapper = document.createElement("div");
     metricsWrapper.className = "session-dashboard-metrics";
@@ -93,57 +144,88 @@
     listTitle.textContent = "Actieve leerlingen";
 
     const list = document.createElement("ul");
-    list.className = "session-dashboard-list";
-
-    const emptyState = document.createElement("p");
-    emptyState.className = "session-dashboard-empty";
-    emptyState.textContent = "Momenteel geen leerlingen actief.";
-    emptyState.hidden = true;
+    list.className = "dsq-dashboard-session-list";
 
     const errorEl = document.createElement("p");
     errorEl.className = "session-dashboard-error";
     errorEl.hidden = true;
 
-    listSection.append(listTitle, list, emptyState);
+    listSection.append(listTitle, list);
 
     wrapper.append(header, metricsWrapper, listSection, errorEl);
     container.append(wrapper);
 
     return {
       titleEl,
-      passKeyEl,
+      passKey: {
+        wrapper: passKeyWrapper,
+        value: passKeyValue,
+        button: passKeyButton,
+        current: "",
+        defaultLabel: passKeyButton.textContent,
+        resetTimer: null
+      },
       metrics: {
         participants: participantMetric.valueEl,
         correct: correctMetric.valueEl,
         incorrect: incorrectMetric.valueEl
       },
       list,
-      emptyState,
       errorEl
     };
   }
 
-  function updateActiveList(list, emptyState, sessions) {
+  function updateActiveList(list, sessions) {
     list.innerHTML = "";
     if (!sessions || !sessions.length) {
-      emptyState.hidden = false;
+      const emptyItem = document.createElement("li");
+      emptyItem.className = "dsq-dashboard-session-empty";
+      emptyItem.textContent = "Geen actieve leerlingen";
+      list.append(emptyItem);
       return;
     }
 
-    emptyState.hidden = true;
-    sessions.forEach((session) => {
+    const sortedSessions = [...sessions].sort((a, b) => {
+      const correctDiff = (b.correct || 0) - (a.correct || 0);
+      if (correctDiff !== 0) {
+        return correctDiff;
+      }
+      const incorrectDiff = (a.incorrect || 0) - (b.incorrect || 0);
+      if (incorrectDiff !== 0) {
+        return incorrectDiff;
+      }
+      return String(a.name || "").localeCompare(String(b.name || ""), "nl");
+    });
+
+    sortedSessions.forEach((session) => {
       const item = document.createElement("li");
-      item.className = "session-dashboard-list-item";
-      const name = session.name || "Onbekende deelnemer";
-      const correct = formatCount(session.correct || 0);
-      const incorrect = formatCount(session.incorrect || 0);
-      item.innerHTML = `
-        <span class="session-dashboard-list-name">${name}</span>
-        <span class="session-dashboard-list-score">
-          <span class="good">${correct} goed</span>
-          <span class="bad">${incorrect} fout</span>
-        </span>
-      `;
+      item.className = "dsq-dashboard-session-item";
+
+      const nameEl = document.createElement("span");
+      nameEl.className = "dsq-dashboard-session-name";
+      nameEl.textContent = session.name || "Onbekende deelnemer";
+
+      const statsEl = document.createElement("span");
+      statsEl.className = "dsq-dashboard-session-stats";
+      statsEl.textContent = `${formatCount(session.correct || 0)} goed • ${formatCount(
+        session.incorrect || 0
+      )} fout`;
+
+      const timeEl = document.createElement("span");
+      timeEl.className = "dsq-dashboard-session-time";
+      let startLabel = "--:--";
+      if (session.startTime) {
+        const startDate = new Date(session.startTime);
+        if (!Number.isNaN(startDate.getTime())) {
+          startLabel = startDate.toLocaleTimeString("nl-NL", {
+            hour: "2-digit",
+            minute: "2-digit"
+          });
+        }
+      }
+      timeEl.textContent = `Gestart om ${startLabel}`;
+
+      item.append(nameEl, statsEl, timeEl);
       list.append(item);
     });
   }
@@ -161,11 +243,15 @@
       ? `Sessiestatistieken – ${titleParts.join(" • ")}`
       : "Sessiestatistieken";
 
-    if (group.passKey) {
-      state.passKeyEl.textContent = `Toegangscode: ${group.passKey}`;
-    } else {
-      state.passKeyEl.textContent = "";
+    const passKey = group.passKey || "";
+    if (state.passKey.resetTimer) {
+      window.clearTimeout(state.passKey.resetTimer);
+      state.passKey.resetTimer = null;
     }
+    state.passKey.button.textContent = state.passKey.defaultLabel;
+    state.passKey.value.textContent = passKey || "—";
+    state.passKey.button.disabled = !passKey;
+    state.passKey.current = passKey;
 
     state.metrics.participants.textContent = formatCount(
       data.activeParticipants || 0
@@ -173,7 +259,7 @@
     state.metrics.correct.textContent = formatCount(data.totalCorrect || 0);
     state.metrics.incorrect.textContent = formatCount(data.totalIncorrect || 0);
 
-    updateActiveList(state.list, state.emptyState, data.activeSessions || []);
+    updateActiveList(state.list, data.activeSessions || []);
     state.errorEl.hidden = true;
   }
 
@@ -300,10 +386,9 @@
     const state = {
       groupId,
       titleEl: view.titleEl,
-      passKeyEl: view.passKeyEl,
+      passKey: view.passKey,
       metrics: view.metrics,
       list: view.list,
-      emptyState: view.emptyState,
       errorEl: view.errorEl,
       comparison: {
         section: document.getElementById("session-comparison"),
@@ -312,6 +397,34 @@
         empty: document.getElementById("session-comparison-empty")
       }
     };
+
+    if (state.passKey?.button) {
+      state.passKey.button.addEventListener("click", async () => {
+        const passKey = state.passKey.current;
+        if (!passKey) {
+          return;
+        }
+
+        if (state.passKey.resetTimer) {
+          window.clearTimeout(state.passKey.resetTimer);
+          state.passKey.resetTimer = null;
+        }
+
+        state.passKey.button.disabled = true;
+        const success = await copyToClipboard(passKey);
+        state.passKey.button.disabled = !state.passKey.current;
+
+        state.passKey.button.textContent = success
+          ? "Gekopieerd!"
+          : "Kopieer handmatig";
+
+        state.passKey.resetTimer = window.setTimeout(() => {
+          state.passKey.button.textContent = state.passKey.defaultLabel;
+          state.passKey.button.disabled = !state.passKey.current;
+          state.passKey.resetTimer = null;
+        }, success ? 2000 : 3000);
+      });
+    }
 
     async function refresh() {
       try {

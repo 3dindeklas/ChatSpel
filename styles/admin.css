@@ -496,9 +496,35 @@ body {
 }
 
 .session-dashboard-passkey {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   margin: 0;
+}
+
+.session-dashboard-passkey-label {
   font-weight: 600;
   color: #1d4ed8;
+}
+
+.session-dashboard-passkey-value {
+  background: #0f172a;
+  color: #ffffff;
+  padding: 0.35rem 0.75rem;
+  border-radius: 10px;
+  letter-spacing: 0.25em;
+  font-size: 1.1rem;
+}
+
+.session-dashboard-passkey-copy {
+  font-size: 0.9rem;
+  padding: 0.35rem 0.75rem;
+}
+
+.session-dashboard-passkey-copy:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .session-dashboard-metrics {
