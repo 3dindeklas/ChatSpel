@@ -350,6 +350,29 @@ app.delete(
   })
 );
 
+app.get(
+  "/api/session-groups",
+  asyncHandler(async (req, res) => {
+    const groups = await allQuery(
+      `SELECT id,
+              school_name AS schoolName,
+              group_name AS groupName,
+              pass_key AS passKey,
+              created_at AS createdAt,
+              is_active AS isActive
+         FROM session_groups
+        ORDER BY datetime(created_at) DESC, lower(group_name) ASC`
+    );
+
+    res.json(
+      groups.map((group) => ({
+        ...group,
+        isActive: group.isActive === 1 || group.isActive === true
+      }))
+    );
+  })
+);
+
 app.post(
   "/api/session-groups",
   asyncHandler(async (req, res) => {

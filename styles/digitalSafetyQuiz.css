@@ -641,6 +641,10 @@
   text-align: center;
 }
 
+.session-access-choice {
+  text-align: left;
+}
+
 .session-access-card h1 {
   font-size: 2rem;
   margin-bottom: 0.75rem;
@@ -651,6 +655,25 @@
   font-size: 1.05rem;
   color: #475569;
   margin: 0;
+}
+
+.session-access-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1.75rem;
+}
+
+.session-access-options .dsq-button,
+.session-access-options .dsq-button-secondary {
+  flex: 1 1 220px;
+  justify-content: center;
+}
+
+.session-access-note {
+  margin-top: 1.75rem;
+  color: #1f2937;
+  font-weight: 600;
 }
 
 .session-access-form {
@@ -685,5 +708,9 @@
 
   .session-access-wrapper {
     padding: 2rem 1.25rem;
+  }
+
+  .session-access-options {
+    flex-direction: column;
   }
 }

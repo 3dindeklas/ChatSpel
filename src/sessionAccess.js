@@ -47,22 +47,65 @@
     const errorEl = document.querySelector("#session-access-error");
     const infoEl = document.querySelector("#session-access-info");
     const card = document.querySelector("#session-access");
+    const choiceCard = document.querySelector("#session-choice-card");
+    const soloButton = document.querySelector("#session-start-solo");
     const quizContainer = document.querySelector("#quiz");
 
     if (!form || !input || !quizContainer) {
       return;
     }
 
-    let loading = false;
+    const submitButton = form.querySelector("button[type=submit]");
+    const defaultSubmitLabel = submitButton ? submitButton.textContent : "Ga naar de quiz";
+    const defaultSoloLabel = soloButton ? soloButton.textContent.trim() : "";
 
-    function setLoading(isLoading) {
-      loading = isLoading;
-      const submitButton = form.querySelector("button[type=submit]");
+    let busy = false;
+    let busySource = null;
+
+    function setBusy(source, isBusy) {
+      busy = isBusy;
+      busySource = isBusy ? source : null;
+
       if (submitButton) {
-        submitButton.disabled = isLoading;
-        submitButton.textContent = isLoading ? "Bezig..." : "Ga naar de quiz";
+        submitButton.disabled = isBusy;
+        submitButton.textContent =
+          isBusy && busySource === "passkey" ? "Bezig..." : defaultSubmitLabel;
       }
-      input.disabled = isLoading;
+
+      if (input) {
+        input.disabled = isBusy;
+      }
+
+      if (soloButton) {
+        soloButton.disabled = isBusy;
+        soloButton.textContent =
+          isBusy && busySource === "solo" ? "Bezig..." : defaultSoloLabel;
+      }
+    }
+
+    function showQuiz(config, group = null) {
+      if (!config) {
+        return;
+      }
+
+      if (choiceCard) {
+        choiceCard.hidden = true;
+      }
+
+      if (card) {
+        card.hidden = true;
+      }
+
+      quizContainer.hidden = false;
+      quizContainer.innerHTML = "";
+
+      new DigitalSafetyQuiz({
+        container: quizContainer,
+        config,
+        apiBaseUrl: "",
+        sessionGroupId: group?.id || null,
+        sessionGroup: group || null
+      });
     }
 
     function resetMessages() {
@@ -82,7 +125,7 @@
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      if (loading) {
+      if (busy) {
         return;
       }
 
@@ -94,7 +137,7 @@
         return;
       }
 
-      setLoading(true);
+      setBusy("passkey", true);
 
       try {
         const group = await fetchJson(
@@ -114,31 +157,53 @@
           infoEl.hidden = false;
         }
 
-        if (card) {
-          card.hidden = true;
-        }
-
-        quizContainer.hidden = false;
-
-        new DigitalSafetyQuiz({
-          container: quizContainer,
-          config,
-          apiBaseUrl: "",
-          sessionGroupId: group.id,
-          sessionGroup: group
-        });
-        setLoading(false);
+        showQuiz(config, group);
         return;
       } catch (error) {
         showMessage(
           errorEl,
           error?.message || "Kon de sessie niet vinden. Controleer de code."
         );
-        setLoading(false);
+        setBusy(null, false);
         input.focus();
         input.select();
         return;
+      } finally {
+        if (!quizContainer.hidden) {
+          setBusy(null, false);
+        }
       }
     });
+
+    if (soloButton) {
+      soloButton.addEventListener("click", async () => {
+        if (busy) {
+          return;
+        }
+
+        resetMessages();
+        setBusy("solo", true);
+
+        try {
+          const config = await fetchJson("/api/quiz-config");
+          if (infoEl) {
+            infoEl.textContent = "De losse quiz wordt geladen. Veel succes!";
+            infoEl.hidden = false;
+          }
+          showQuiz(config, null);
+        } catch (error) {
+          showMessage(
+            errorEl,
+            error?.message ||
+              "Kon de quiz niet laden. Vernieuw de pagina en probeer opnieuw."
+          );
+          setBusy(null, false);
+        } finally {
+          if (!quizContainer.hidden) {
+            setBusy(null, false);
+          }
+        }
+      });
+    }
   });
 })();
