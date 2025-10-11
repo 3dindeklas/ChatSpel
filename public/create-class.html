@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Klas aanmaken</title>
+    <link rel="stylesheet" href="../styles/admin.css" />
+    <link rel="stylesheet" href="../styles/digitalSafetyQuiz.css" />
+  </head>
+  <body>
+    <main class="admin-container session-create-container">
+      <header class="admin-header">
+        <div class="admin-title-group">
+          <h1>Klas aanmaken</h1>
+        </div>
+      </header>
+
+      <section class="admin-card">
+        <h2>Maak een klas</h2>
+        <p class="admin-intro">
+          Vul de naam van de school en de groep in om een klascode te ontvangen.
+          Deel deze code met de leerlingen zodat zij de quiz kunnen starten.
+        </p>
+        <form id="session-group-form" class="session-group-form">
+          <div class="session-group-field">
+            <label for="session-group-school">School</label>
+            <input
+              id="session-group-school"
+              name="schoolName"
+              type="text"
+              class="dsq-input"
+              placeholder="Naam van de school"
+              required
+            />
+          </div>
+          <div class="session-group-field">
+            <label for="session-group-name">Groep / klas</label>
+            <input
+              id="session-group-name"
+              name="groupName"
+              type="text"
+              class="dsq-input"
+              placeholder="Bijvoorbeeld groep 7A"
+              required
+            />
+          </div>
+          <div class="session-group-actions">
+            <button type="submit" class="dsq-button">Maak klascode</button>
+          </div>
+        </form>
+        <p id="session-group-error" class="session-group-error" hidden></p>
+      </section>
+
+      <section class="admin-card" id="session-group-details" hidden>
+        <h2>Deel de klascode</h2>
+        <p class="admin-intro">
+          Deel de onderstaande code met de klas. Met de knop ga je direct naar
+          het live dashboard.
+        </p>
+        <p class="session-group-passkey">
+          <span>Code:</span>
+          <code id="session-group-passkey"></code>
+          <button type="button" id="session-group-copy" class="dsq-button-secondary">
+            Kopieer code
+          </button>
+        </p>
+        <dl class="session-group-summary">
+          <div>
+            <dt>School</dt>
+            <dd id="session-group-summary-school"></dd>
+          </div>
+          <div>
+            <dt>Groep</dt>
+            <dd id="session-group-summary-group"></dd>
+          </div>
+        </dl>
+        <div class="session-group-actions">
+          <a
+            id="session-group-dashboard-link"
+            class="dsq-button"
+            target="_blank"
+            rel="noopener"
+            href="dashboard.html"
+            >Open live dashboard</a
+          >
+        </div>
+      </section>
+    </main>
+
+    <script src="../src/sessionGroupManager.js" defer></script>
+  </body>
+</html>

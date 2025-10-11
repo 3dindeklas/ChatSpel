@@ -21,7 +21,7 @@ Voer deze controles uit in een lokale ontwikkelomgeving (bijv. `npm run start`) 
 
 | Scenario | Stappen | Verwachte uitkomst |
 |----------|---------|--------------------|
-| School maakt nieuwe sessie aan | 1. Ga naar `/school-session.html`.<br>2. Vul schoolnaam en groepsnaam in.<br>3. Kies toegestane vraaggroepen en bevestig. | Er verschijnt een passkey en de sessie is zichtbaar in de sessielijst. |
+| School maakt nieuwe sessie aan | 1. Ga naar `/admin/school-session.html`.<br>2. Vul schoolnaam en groepsnaam in.<br>3. Kies toegestane vraaggroepen en bevestig. | Er verschijnt een passkey en de sessie is zichtbaar in de sessielijst. |
 | Leerling meldt zich aan met passkey | 1. Ga naar `/index.html`.<br>2. Vul een geldige passkey in.<br>3. Start de quiz. | Quiz start met geselecteerde vraaggroepen; voortgang wordt opgeslagen bij de sessie. |
 | Passkey ongeldig | 1. Ga naar `/index.html`.<br>2. Vul een willekeurige of verlopen passkey in. | Er verschijnt een duidelijke foutmelding en er wordt geen quiz gestart. |
 
@@ -38,15 +38,15 @@ Voer deze controles uit in een lokale ontwikkelomgeving (bijv. `npm run start`) 
 |----------|---------|--------------------|
 | Dashboard overzicht | 1. Open `/dashboard.html`.<br>2. Selecteer de sessie uit stap 2.1. | Grafieken tonen juiste resultaten voor de geselecteerde sessie. |
 | Vergelijking met andere sessies | 1. Kies meerdere sessies in de vergelijkingsselector.<br>2. Controleer de grafiek. | Vergelijkingsgrafiek toont correct vs. fout per sessie. |
-| Toggle vraaggroepen | 1. Keer terug naar `/school-session.html`.<br>2. Pas de selectie aan en sla op.<br>3. Vernieuw dashboard. | Alleen de geselecteerde vraaggroepen worden weergegeven in sessie- en dashboardschermen. |
+| Toggle vraaggroepen | 1. Keer terug naar `/admin/school-session.html`.<br>2. Pas de selectie aan en sla op.<br>3. Vernieuw dashboard. | Alleen de geselecteerde vraaggroepen worden weergegeven in sessie- en dashboardschermen. |
 
 ### 2.4 Administratie en contentbeheer
 
 | Scenario | Stappen | Verwachte uitkomst |
 |----------|---------|--------------------|
-| Vraagbeheer | 1. Open `/question-editor.html`.<br>2. Voeg nieuwe vraag toe / bewerk bestaande.<br>3. Sla wijzigingen op. | Wijzigingen verschijnen in de vragenlijst en zijn bruikbaar in nieuwe sessies. |
-| Categoriebeheer | 1. Open `/categories.html`.<br>2. Voeg categorie toe / bewerk bestaande.<br>3. Sla op. | Nieuwe categorieën zijn beschikbaar bij het maken van vragen. |
-| Database-export | Open `/database.html` en download de export. | Bestand bevat actuele gegevens zonder fouten. |
+| Vraagbeheer | 1. Open `/admin/question-editor.html`.<br>2. Voeg nieuwe vraag toe / bewerk bestaande.<br>3. Sla wijzigingen op. | Wijzigingen verschijnen in de vragenlijst en zijn bruikbaar in nieuwe sessies. |
+| Categoriebeheer | 1. Open `/admin/categories.html`.<br>2. Voeg categorie toe / bewerk bestaande.<br>3. Sla op. | Nieuwe categorieën zijn beschikbaar bij het maken van vragen. |
+| Database-export | Open `/admin/database.html` en download de export. | Bestand bevat actuele gegevens zonder fouten. |
 
 ## 3. Release checklist
 

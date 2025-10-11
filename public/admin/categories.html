@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vraag bewerken</title>
+    <title>Categoriebeheer</title>
     <link rel="stylesheet" href="../styles/admin.css" />
   </head>
-  <body data-admin-page="questions">
+  <body data-admin-page="categories">
     <main class="admin-container">
       <header class="admin-header">
         <div class="admin-title-group">
@@ -27,50 +27,61 @@
               <a class="admin-menu-link" href="database.html" data-page="database">Database</a>
               <a class="admin-menu-link" href="categories.html" data-page="categories">Categorieën</a>
               <a class="admin-menu-link" href="questions.html" data-page="questions">Vragen</a>
-              <a class="admin-menu-link" href="dashboard.html" data-page="dashboard">Live dashboard</a>
+              <a class="admin-menu-link" href="../dashboard.html" data-page="dashboard">Live dashboard</a>
               <a class="admin-menu-link" href="school-session.html" data-page="sessions">Klas-sessies</a>
             </nav>
           </div>
-          <h1 id="editor-title">Nieuwe vraag</h1>
+          <h1>Categoriebeheer</h1>
         </div>
-        <a class="admin-button admin-secondary" href="questions.html">Terug naar overzicht</a>
+        <button class="admin-button" type="button" id="category-new">
+          Nieuwe categorie
+        </button>
       </header>
+
       <section class="admin-card">
-        <div id="editor-feedback"></div>
-        <form class="admin-form" id="question-form">
+        <div id="categories-feedback"></div>
+        <table class="admin-table" id="categories-table" hidden>
+          <thead>
+            <tr>
+              <th>Categorie</th>
+              <th>Vragen per sessie</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="admin-empty" id="categories-empty" hidden>
+          Nog geen categorieën gevonden.
+        </div>
+      </section>
+
+      <section class="admin-card">
+        <h2 id="category-form-title">Nieuwe categorie</h2>
+        <div id="category-form-feedback"></div>
+        <form class="admin-form" id="category-form">
           <div class="admin-field">
-            <label for="question-module">Categorie</label>
-            <select id="question-module" required></select>
+            <label for="category-name">Naam</label>
+            <input id="category-name" type="text" required />
           </div>
           <div class="admin-field">
-            <label for="question-text">Vraag</label>
-            <textarea id="question-text" rows="3" required></textarea>
+            <label for="category-questions">Vragen per sessie</label>
+            <input id="category-questions" type="number" min="1" value="5" required />
           </div>
-          <div class="admin-field">
-            <label for="question-type">Type vraag</label>
-            <select id="question-type">
-              <option value="single">Meerkeuze (1 antwoord)</option>
-              <option value="multiple">Meerkeuze (meerdere antwoorden)</option>
-            </select>
-          </div>
-          <div class="admin-field">
-            <label>Antwoorden</label>
-            <div class="admin-options" id="options-list"></div>
-            <button type="button" class="admin-button admin-secondary" id="add-option">
-              Optie toevoegen
-            </button>
-          </div>
-          <div class="admin-field">
-            <label for="feedback-correct">Feedback bij goed antwoord</label>
-            <textarea id="feedback-correct" rows="2"></textarea>
-          </div>
-          <div class="admin-field">
-            <label for="feedback-incorrect">Feedback bij fout antwoord</label>
-            <textarea id="feedback-incorrect" rows="2"></textarea>
+          <div class="admin-field admin-field--inline">
+            <label class="admin-toggle">
+              <input id="category-active" type="checkbox" checked />
+              Actief in quiz
+            </label>
           </div>
           <div class="admin-actions">
             <button type="submit" class="admin-button">Opslaan</button>
-            <button type="button" class="admin-button admin-secondary" id="cancel-button">
+            <button
+              type="button"
+              class="admin-button admin-secondary"
+              id="category-cancel"
+              hidden
+            >
               Annuleren
             </button>
           </div>
@@ -79,6 +90,6 @@
     </main>
     <script src="../src/shared/adminUi.js" defer></script>
     <script src="../src/adminMenu.js" defer></script>
-    <script src="../src/questionEditor.js" defer></script>
+    <script src="../src/adminCategories.js" defer></script>
   </body>
 </html>

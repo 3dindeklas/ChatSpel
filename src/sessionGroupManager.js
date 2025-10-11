@@ -45,12 +45,20 @@
   }
 
   function getSelectedModuleIds(container) {
-    return toArray(container.querySelectorAll("input[type=checkbox]:checked")).map(
-      (input) => input.value
-    );
+    if (!container) {
+      return [];
+    }
+
+    return toArray(
+      container.querySelectorAll("input[type=checkbox]:checked")
+    ).map((input) => input.value);
   }
 
   function renderModuleChoices(container, modules, selectedIds = []) {
+    if (!container) {
+      return;
+    }
+
     const selection = new Set(selectedIds);
     container.innerHTML = "";
     modules.forEach((module) => {
@@ -69,6 +77,10 @@
   }
 
   function renderModuleToggleList(container, modules, selectedIds = []) {
+    if (!container) {
+      return;
+    }
+
     const selection = new Set(selectedIds);
     container.innerHTML = "";
 
@@ -131,6 +143,10 @@
 
   document.addEventListener("DOMContentLoaded", async () => {
     const form = document.getElementById("session-group-form");
+    if (!form) {
+      return;
+    }
+
     const modulesContainer = document.getElementById(
       "session-group-form-modules"
     );
@@ -153,14 +169,11 @@
       "session-group-overview-error"
     );
 
-    if (!form || !modulesContainer || !moduleList) {
-      return;
-    }
-
     let modules = [];
     let currentGroup = null;
     let savingModules = false;
     let overviewLoading = false;
+    const shouldLoadModules = Boolean(modulesContainer || moduleList);
 
     function setFormDisabled(isDisabled) {
       toArray(form.elements).forEach((element) => {
@@ -169,6 +182,10 @@
     }
 
     function setModuleInputsDisabled(container, isDisabled) {
+      if (!container) {
+        return;
+      }
+
       toArray(container.querySelectorAll("input[type=checkbox]")).forEach(
         (input) => {
           input.disabled = isDisabled;
@@ -259,7 +276,7 @@
 
         const viewLink = document.createElement("a");
         viewLink.className = "dsq-button-secondary session-group-overview-view";
-        viewLink.href = `dashboard.html?groupId=${encodeURIComponent(group.id)}`;
+        viewLink.href = `/dashboard.html?groupId=${encodeURIComponent(group.id)}`;
         viewLink.textContent = "Bekijk sessie";
         viewLink.target = "_blank";
         viewLink.rel = "noopener";
@@ -310,6 +327,11 @@
     }
 
     async function loadModules() {
+      if (!shouldLoadModules) {
+        modules = [];
+        return;
+      }
+
       try {
         modules = await fetchJson("/api/modules");
         renderModuleChoices(modulesContainer, modules);
@@ -327,9 +349,6 @@
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      if (!modules.length) {
-        return;
-      }
 
       showMessage(errorEl, "");
 
@@ -358,13 +377,16 @@
           modules,
           createdGroup.allowedModules
         );
-        showMessage(moduleStatus, "Toegangscode aangemaakt. Deel deze met de klas.");
+        showMessage(
+          moduleStatus,
+          "Toegangscode aangemaakt. Deel deze met de klas."
+        );
         showMessage(moduleError, "");
         if (detailsSection) {
           detailsSection.hidden = false;
         }
         if (dashboardLink && createdGroup.id) {
-          dashboardLink.href = `dashboard.html?groupId=${encodeURIComponent(
+          dashboardLink.href = `/dashboard.html?groupId=${encodeURIComponent(
             createdGroup.id
           )}`;
         }
@@ -376,63 +398,65 @@
       }
     });
 
-    moduleList.addEventListener("change", async (event) => {
-      const target = event.target;
-      if (
-        !currentGroup ||
-        savingModules ||
-        !(target instanceof HTMLInputElement) ||
-        target.type !== "checkbox"
-      ) {
-        return;
-      }
+    if (moduleList) {
+      moduleList.addEventListener("change", async (event) => {
+        const target = event.target;
+        if (
+          !currentGroup ||
+          savingModules ||
+          !(target instanceof HTMLInputElement) ||
+          target.type !== "checkbox"
+        ) {
+          return;
+        }
 
-      const selectedIds = getSelectedModuleIds(moduleList);
-      if (!selectedIds.length) {
-        target.checked = true;
-        showMessage(
-          moduleError,
-          "Laat minimaal één vraaggroep aan voor deze sessie."
-        );
-        return;
-      }
+        const selectedIds = getSelectedModuleIds(moduleList);
+        if (!selectedIds.length) {
+          target.checked = true;
+          showMessage(
+            moduleError,
+            "Laat minimaal één vraaggroep aan voor deze sessie."
+          );
+          return;
+        }
 
-      showMessage(moduleError, "");
-      showMessage(moduleStatus, "Wijzigingen opslaan...");
-      savingModules = true;
-      setModuleInputsDisabled(moduleList, true);
+        showMessage(moduleError, "");
+        showMessage(moduleStatus, "Wijzigingen opslaan...");
+        savingModules = true;
+        setModuleInputsDisabled(moduleList, true);
 
-      try {
-        const updatedGroup = await fetchJson(
-          `/api/session-groups/${encodeURIComponent(currentGroup.id)}/modules`,
-          {
-            method: "PUT",
-            body: JSON.stringify({ moduleIds: selectedIds })
-          }
-        );
+        try {
+          const updatedGroup = await fetchJson(
+            `/api/session-groups/${encodeURIComponent(currentGroup.id)}/modules`,
+            {
+              method: "PUT",
+              body: JSON.stringify({ moduleIds: selectedIds })
+            }
+          );
 
-        currentGroup = updatedGroup;
-        renderModuleToggleList(
-          moduleList,
-          modules,
-          updatedGroup.allowedModules
-        );
-        showMessage(moduleStatus, "Vraaggroepen bijgewerkt.");
-      } catch (error) {
-        showMessage(
-          moduleError,
-          error?.message || "Opslaan van vraaggroepen is mislukt."
-        );
-        renderModuleToggleList(
-          moduleList,
-          modules,
-          currentGroup.allowedModules
-        );
-      } finally {
-        savingModules = false;
-        setModuleInputsDisabled(moduleList, false);
-      }
-    });
+          currentGroup = updatedGroup;
+          renderModuleToggleList(
+            moduleList,
+            modules,
+            updatedGroup.allowedModules
+          );
+          showMessage(moduleStatus, "Vraaggroepen bijgewerkt.");
+        } catch (error) {
+          showMessage(
+            moduleError,
+            error?.message || "Opslaan van vraaggroepen is mislukt."
+          );
+          renderModuleToggleList(
+            moduleList,
+            modules,
+            currentGroup.allowedModules
+          );
+        } finally {
+          savingModules = false;
+          setModuleInputsDisabled(moduleList, false);
+        }
+      });
+    }
 
     async function tryCopyToClipboard(text) {
       if (!text) {
