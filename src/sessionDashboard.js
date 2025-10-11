@@ -124,7 +124,32 @@
     titleEl.className = "session-dashboard-title";
     titleEl.textContent = "Sessiestatistieken";
 
-    header.append(passKeyWrapper, titleEl);
+    const meta = document.createElement("div");
+    meta.className = "session-dashboard-meta";
+
+    const schoolItem = document.createElement("div");
+    schoolItem.className = "session-dashboard-meta-item";
+    const schoolLabel = document.createElement("span");
+    schoolLabel.className = "session-dashboard-meta-label";
+    schoolLabel.textContent = "School";
+    const schoolValue = document.createElement("span");
+    schoolValue.className = "session-dashboard-meta-value";
+    schoolValue.textContent = "—";
+    schoolItem.append(schoolLabel, schoolValue);
+
+    const groupItem = document.createElement("div");
+    groupItem.className = "session-dashboard-meta-item";
+    const groupLabel = document.createElement("span");
+    groupLabel.className = "session-dashboard-meta-label";
+    groupLabel.textContent = "Groep";
+    const groupValue = document.createElement("span");
+    groupValue.className = "session-dashboard-meta-value";
+    groupValue.textContent = "—";
+    groupItem.append(groupLabel, groupValue);
+
+    meta.append(schoolItem, groupItem);
+
+    header.append(passKeyWrapper, titleEl, meta);
 
     const metricsWrapper = document.createElement("div");
     metricsWrapper.className = "session-dashboard-metrics";
@@ -164,6 +189,11 @@
         current: "",
         defaultLabel: passKeyButton.textContent,
         resetTimer: null
+      },
+      details: {
+        container: meta,
+        school: schoolValue,
+        group: groupValue
       },
       metrics: {
         participants: participantMetric.valueEl,
@@ -252,6 +282,16 @@
     state.passKey.value.textContent = passKey || "—";
     state.passKey.button.disabled = !passKey;
     state.passKey.current = passKey;
+
+    if (state.details) {
+      const normalize = (value) => {
+        const text = String(value || "").trim();
+        return text.length ? text : "—";
+      };
+      state.details.school.textContent = normalize(group.schoolName);
+      state.details.group.textContent = normalize(group.groupName);
+      state.details.container.hidden = false;
+    }
 
     state.metrics.participants.textContent = formatCount(
       data.activeParticipants || 0

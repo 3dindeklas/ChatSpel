@@ -110,11 +110,15 @@
   function updateSummary(group) {
     const schoolEl = document.getElementById("session-group-summary-school");
     const groupEl = document.getElementById("session-group-summary-group");
+    const normalize = (value) => {
+      const text = String(value || "").trim();
+      return text.length ? text : "—";
+    };
     if (schoolEl) {
-      schoolEl.textContent = group.schoolName || "";
+      schoolEl.textContent = normalize(group.schoolName);
     }
     if (groupEl) {
-      groupEl.textContent = group.groupName || "";
+      groupEl.textContent = normalize(group.groupName);
     }
   }
 
@@ -139,6 +143,15 @@
       "session-group-dashboard-link"
     );
     const copyButton = document.getElementById("session-group-copy");
+    const overviewList = document.getElementById(
+      "session-group-overview-list"
+    );
+    const overviewEmpty = document.getElementById(
+      "session-group-overview-empty"
+    );
+    const overviewError = document.getElementById(
+      "session-group-overview-error"
+    );
 
     if (!form || !modulesContainer || !moduleList) {
       return;
@@ -147,6 +160,7 @@
     let modules = [];
     let currentGroup = null;
     let savingModules = false;
+    let overviewLoading = false;
 
     function setFormDisabled(isDisabled) {
       toArray(form.elements).forEach((element) => {
@@ -160,6 +174,139 @@
           input.disabled = isDisabled;
         }
       );
+    }
+
+    function formatDateTime(value) {
+      if (!value) {
+        return "—";
+      }
+
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return value;
+      }
+
+      const datePart = date.toLocaleDateString("nl-NL");
+      const timePart = date.toLocaleTimeString("nl-NL", {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+
+      return `${datePart} ${timePart}`;
+    }
+
+    function renderOverview(groups = []) {
+      if (!overviewList) {
+        return;
+      }
+
+      overviewList.innerHTML = "";
+
+      groups.forEach((group) => {
+        const item = document.createElement("article");
+        item.className = "session-group-overview-item";
+
+        const header = document.createElement("div");
+        header.className = "session-group-overview-header";
+
+        const names = document.createElement("div");
+        names.className = "session-group-overview-names";
+
+        const title = document.createElement("h3");
+        title.className = "session-group-overview-group";
+        title.textContent = group.groupName?.trim()
+          ? group.groupName
+          : "Onbekende groep";
+
+        const school = document.createElement("p");
+        school.className = "session-group-overview-school";
+        school.textContent = group.schoolName?.trim()
+          ? group.schoolName
+          : "—";
+
+        names.append(title, school);
+
+        const code = document.createElement("div");
+        code.className = "session-group-overview-code";
+
+        const codeLabel = document.createElement("span");
+        codeLabel.className = "session-group-overview-code-label";
+        codeLabel.textContent = "Toegangscode";
+
+        const codeValue = document.createElement("code");
+        codeValue.className = "session-group-overview-code-value";
+        codeValue.textContent = group.passKey?.trim() ? group.passKey : "—";
+
+        const copyAction = document.createElement("button");
+        copyAction.type = "button";
+        copyAction.className =
+          "dsq-button-secondary session-group-overview-copy";
+        copyAction.dataset.action = "copy-passkey";
+        copyAction.dataset.passkey = group.passKey || "";
+        copyAction.textContent = "Kopieer code";
+        copyAction.disabled = !group.passKey;
+
+        code.append(codeLabel, codeValue, copyAction);
+
+        header.append(names, code);
+
+        const footer = document.createElement("div");
+        footer.className = "session-group-overview-footer";
+
+        const created = document.createElement("span");
+        created.className = "session-group-overview-created";
+        created.textContent = `Aangemaakt op ${formatDateTime(group.createdAt)}`;
+
+        const viewLink = document.createElement("a");
+        viewLink.className = "dsq-button-secondary session-group-overview-view";
+        viewLink.href = `dashboard.html?groupId=${encodeURIComponent(group.id)}`;
+        viewLink.textContent = "Bekijk sessie";
+        viewLink.target = "_blank";
+        viewLink.rel = "noopener";
+
+        footer.append(created, viewLink);
+
+        item.append(header, footer);
+        overviewList.append(item);
+      });
+    }
+
+    async function loadOverview() {
+      if (!overviewList || overviewLoading) {
+        return;
+      }
+
+      overviewLoading = true;
+      showMessage(overviewError, "");
+      if (overviewEmpty) {
+        overviewEmpty.hidden = true;
+      }
+
+      const loadingMessage = document.createElement("p");
+      loadingMessage.className = "session-group-overview-loading";
+      loadingMessage.textContent = "Klas-sessies laden...";
+      overviewList.innerHTML = "";
+      overviewList.append(loadingMessage);
+
+      try {
+        const groups = await fetchJson("/api/session-groups");
+        overviewList.innerHTML = "";
+        if (!groups.length) {
+          if (overviewEmpty) {
+            overviewEmpty.hidden = false;
+          }
+          return;
+        }
+        renderOverview(groups);
+      } catch (error) {
+        overviewList.innerHTML = "";
+        showMessage(
+          overviewError,
+          error?.message || "Kon de klas-sessies niet laden."
+        );
+      } finally {
+        overviewLoading = false;
+      }
     }
 
     async function loadModules() {
@@ -176,6 +323,7 @@
     }
 
     await loadModules();
+    await loadOverview();
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -220,6 +368,7 @@
             createdGroup.id
           )}`;
         }
+        await loadOverview();
       } catch (error) {
         showMessage(errorEl, error?.message || "Er ging iets mis bij het opslaan.");
       } finally {
@@ -330,6 +479,29 @@
 
         window.setTimeout(() => {
           copyButton.textContent = originalLabel;
+        }, success ? 2000 : 3000);
+      });
+    }
+
+    if (overviewList) {
+      overviewList.addEventListener("click", async (event) => {
+        const target = event.target?.closest?.("[data-action=copy-passkey]");
+        if (!target) {
+          return;
+        }
+
+        const passKey = target.dataset.passkey || "";
+        if (!passKey) {
+          return;
+        }
+
+        const originalLabel = target.textContent;
+        target.disabled = true;
+        const success = await tryCopyToClipboard(passKey);
+        target.textContent = success ? "Gekopieerd!" : "Kopieer handmatig";
+        window.setTimeout(() => {
+          target.textContent = originalLabel;
+          target.disabled = false;
         }, success ? 2000 : 3000);
       });
     }
