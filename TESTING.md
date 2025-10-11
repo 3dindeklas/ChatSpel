@@ -7,8 +7,8 @@ Deze teststrategie helpt om de belangrijkste onderdelen van ChatSpel te controle
 | Domein | Test | Command | Verwachte uitkomst |
 |--------|------|---------|--------------------|
 | Projectbreed | Pakketinstallatie | `npm install` | Installatie voltooit zonder fouten |
-| Lint/kwaliteit | ESLint (in te plannen) | _TODO: `npm run lint`_ | Geen lint-fouten |
-| Backend | Unit tests voor server logica | _TODO_ | Alle tests slagen |
+| Lint/kwaliteit | Syntaxcontrole JavaScript | `npm run lint` | Alle bronbestanden zijn syntactisch geldig |
+| Backend | Unit tests voor server logica | `npm test` | Alle tests slagen |
 | Frontend | Unit tests voor componenten | _TODO_ | Alle tests slagen |
 
 > :bulb: Voeg bij het introduceren van nieuwe lint- of testcommando's de exacte opdracht toe aan deze tabel.
