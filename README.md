@@ -24,7 +24,7 @@ Deze repository bevat een kant-en-klare quizmodule die je kunt insluiten op bijv
    npm start
    ```
 
-4. Open vervolgens [http://localhost:3000/](http://localhost:3000/) in je browser om de quiz te bekijken. Het live dashboard is bereikbaar via `public/dashboard.html` en het beheer van vragen via `public/questions.html`.
+4. Open vervolgens [http://localhost:3000/](http://localhost:3000/) in je browser om de quiz te bekijken. Het live dashboard is bereikbaar via `public/dashboard.html` en het beheer van vragen via `public/admin/questions.html`.
 
 Tijdens ontwikkeling kun je ook `npm run dev` gebruiken voor automatische herstart bij codewijzigingen.
 
@@ -62,7 +62,7 @@ Wil je lokaal dezelfde Render-database gebruiken? Maak dan een `.env`-bestand me
 
 ### Vragen beheren
 
-Ga naar [http://localhost:3000/questions.html](http://localhost:3000/questions.html) om het overzicht van vragen te zien. Vanuit dit scherm kun je bestaande vragen bewerken of nieuwe vragen toevoegen. Het formulier ondersteunt het aanpassen van antwoordopties, feedbackteksten en het type vraag (één antwoord of meerdere antwoorden).
+Ga naar [http://localhost:3000/admin/questions.html](http://localhost:3000/admin/questions.html) om het overzicht van vragen te zien. Vanuit dit scherm kun je bestaande vragen bewerken of nieuwe vragen toevoegen. Het formulier ondersteunt het aanpassen van antwoordopties, feedbackteksten en het type vraag (één antwoord of meerdere antwoorden).
 
 ## Insluiten op Wix
 
