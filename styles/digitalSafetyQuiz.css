@@ -221,6 +221,39 @@
   margin-left: 0.75rem;
 }
 
+.dsq-button-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 1rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: #f8fafc;
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dsq-button-copy:hover,
+.dsq-button-copy:focus-visible {
+  background: #e2e8f0;
+  color: #1d4ed8;
+  box-shadow: 0 10px 20px rgba(148, 163, 184, 0.35);
+  outline: none;
+}
+
+.dsq-button-copy:disabled,
+.dsq-button-copy[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #e2e8f0;
+  color: #94a3b8;
+  box-shadow: none;
+  border-color: rgba(148, 163, 184, 0.4);
+}
+
 .dsq-feedback {
   margin-top: 1rem;
   padding: 0.75rem 1rem;

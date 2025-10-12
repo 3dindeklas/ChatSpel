@@ -136,8 +136,13 @@
 
   function updatePassKey(group) {
     const passKeyEl = document.getElementById("session-group-passkey");
+    const copyEl = document.getElementById("session-group-copy");
+    const passKey = group?.passKey || "";
     if (passKeyEl) {
-      passKeyEl.textContent = group.passKey || "";
+      passKeyEl.textContent = passKey;
+    }
+    if (copyEl) {
+      copyEl.disabled = !passKey;
     }
   }
 
@@ -256,8 +261,7 @@
 
         const copyAction = document.createElement("button");
         copyAction.type = "button";
-        copyAction.className =
-          "dsq-button-secondary session-group-overview-copy";
+        copyAction.className = "dsq-button-copy session-group-overview-copy";
         copyAction.dataset.action = "copy-passkey";
         copyAction.dataset.passkey = group.passKey || "";
         copyAction.textContent = "Kopieer code";
@@ -275,9 +279,9 @@
         created.textContent = `Aangemaakt op ${formatDateTime(group.createdAt)}`;
 
         const viewLink = document.createElement("a");
-        viewLink.className = "dsq-button-secondary session-group-overview-view";
+        viewLink.className = "dsq-button session-group-overview-view";
         viewLink.href = `/dashboard.html?groupId=${encodeURIComponent(group.id)}`;
-        viewLink.textContent = "Bekijk sessie";
+        viewLink.textContent = "Bekijk dashboard";
         viewLink.target = "_blank";
         viewLink.rel = "noopener";
 

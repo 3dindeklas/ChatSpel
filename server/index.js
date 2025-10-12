@@ -20,6 +20,8 @@ const {
   getSessionGroupById,
   getSessionGroupByPassKey,
   updateSessionGroupModules,
+  listSessionGroups,
+  normalizeSessionGroupRow,
   runQuery,
   allQuery,
   getQuery,
@@ -125,23 +127,24 @@ async function getModulesByIds(ids = []) {
 }
 
 async function buildSessionGroupResponse(group) {
-  if (!group) {
+  const normalized = normalizeSessionGroupRow(group);
+  if (!normalized) {
     return null;
   }
 
-  const allowedModules = Array.isArray(group.allowedModules)
-    ? group.allowedModules
+  const allowedModules = Array.isArray(normalized.allowedModules)
+    ? normalized.allowedModules
     : [];
   const modules = await getModulesByIds(allowedModules);
   return {
-    id: group.id,
-    schoolName: group.schoolName,
-    groupName: group.groupName,
-    passKey: group.passKey,
+    id: normalized.id,
+    schoolName: normalized.schoolName,
+    groupName: normalized.groupName,
+    passKey: normalized.passKey,
     allowedModules,
     modules,
-    createdAt: group.createdAt,
-    isActive: Boolean(group.isActive)
+    createdAt: normalized.createdAt,
+    isActive: Boolean(normalized.isActive)
   };
 }
 
@@ -353,23 +356,9 @@ app.delete(
 app.get(
   "/api/session-groups",
   asyncHandler(async (req, res) => {
-    const groups = await allQuery(
-      `SELECT id,
-              school_name AS schoolName,
-              group_name AS groupName,
-              pass_key AS passKey,
-              created_at AS createdAt,
-              is_active AS isActive
-         FROM session_groups
-        ORDER BY datetime(created_at) DESC, lower(group_name) ASC`
-    );
+    const groups = await listSessionGroups();
 
-    res.json(
-      groups.map((group) => ({
-        ...group,
-        isActive: group.isActive === 1 || group.isActive === true
-      }))
-    );
+    res.json(groups);
   })
 );
 

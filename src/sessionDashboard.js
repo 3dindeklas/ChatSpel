@@ -60,7 +60,7 @@
   function createCopyButton() {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "session-dashboard-passkey-copy dsq-button-secondary";
+    button.className = "session-dashboard-passkey-copy dsq-button-copy";
     button.textContent = "Kopieer code";
     button.disabled = true;
     return button;

@@ -261,6 +261,90 @@ function parseAllowedModules(value) {
   return [];
 }
 
+function getFirstDefined(row, ...keys) {
+  if (!row) {
+    return undefined;
+  }
+
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(row, key)) {
+      const value = row[key];
+      if (value !== undefined && value !== null) {
+        return value;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function toTrimmedString(value) {
+  if (value === undefined || value === null) {
+    return "";
+  }
+
+  const text = String(value).trim();
+  return text;
+}
+
+function normalizeSessionGroupRow(row) {
+  if (!row) {
+    return null;
+  }
+
+  const schoolName = toTrimmedString(
+    getFirstDefined(row, "schoolName", "school_name", "schoolname")
+  );
+  const groupName = toTrimmedString(
+    getFirstDefined(row, "groupName", "group_name", "groupname")
+  );
+  const passKey = toTrimmedString(
+    getFirstDefined(row, "passKey", "pass_key", "passkey")
+  );
+  const createdAtRaw = getFirstDefined(row, "createdAt", "created_at");
+  const allowedModulesRaw = getFirstDefined(
+    row,
+    "allowedModules",
+    "allowed_modules"
+  );
+  const isActiveRaw = getFirstDefined(row, "isActive", "is_active", "active");
+
+  const normalizeBoolean = (value) => {
+    if (typeof value === "boolean") {
+      return value;
+    }
+
+    if (typeof value === "number") {
+      return value !== 0;
+    }
+
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase();
+      if (!normalized) {
+        return false;
+      }
+
+      if (["0", "false", "f", "nee", "uit"].includes(normalized)) {
+        return false;
+      }
+
+      return ["1", "true", "t", "yes", "aan", "on"].includes(normalized);
+    }
+
+    return Boolean(value);
+  };
+
+  return {
+    id: row.id,
+    schoolName,
+    groupName,
+    passKey,
+    allowedModules: parseAllowedModules(allowedModulesRaw),
+    createdAt: createdAtRaw ? String(createdAtRaw) : null,
+    isActive: normalizeBoolean(isActiveRaw)
+  };
+}
+
 async function getSessionGroupById(id) {
   if (!id) {
     return null;
@@ -268,25 +352,18 @@ async function getSessionGroupById(id) {
 
   const row = await getQuery(
     `SELECT id,
-            school_name AS schoolName,
-            group_name AS groupName,
-            pass_key AS passKey,
-            allowed_modules AS allowedModules,
-            created_at AS createdAt,
-            is_active AS isActive
+            school_name AS "schoolName",
+            group_name AS "groupName",
+            pass_key AS "passKey",
+            allowed_modules AS "allowedModules",
+            created_at AS "createdAt",
+            is_active AS "isActive"
        FROM session_groups
       WHERE id = ?`,
     [id]
   );
 
-  if (!row) {
-    return null;
-  }
-
-  return {
-    ...row,
-    allowedModules: parseAllowedModules(row.allowedModules)
-  };
+  return normalizeSessionGroupRow(row);
 }
 
 async function getSessionGroupByPassKey(passKey) {
@@ -303,25 +380,18 @@ async function getSessionGroupByPassKey(passKey) {
 
   const row = await getQuery(
     `SELECT id,
-            school_name AS schoolName,
-            group_name AS groupName,
-            pass_key AS passKey,
-            allowed_modules AS allowedModules,
-            created_at AS createdAt,
-            is_active AS isActive
+            school_name AS "schoolName",
+            group_name AS "groupName",
+            pass_key AS "passKey",
+            allowed_modules AS "allowedModules",
+            created_at AS "createdAt",
+            is_active AS "isActive"
        FROM session_groups
       WHERE lower(pass_key) = ?`,
     [normalized]
   );
 
-  if (!row) {
-    return null;
-  }
-
-  return {
-    ...row,
-    allowedModules: parseAllowedModules(row.allowedModules)
-  };
+  return normalizeSessionGroupRow(row);
 }
 
 async function updateSessionGroupModules(id, moduleIds = []) {
@@ -343,6 +413,22 @@ async function updateSessionGroupModules(id, moduleIds = []) {
   );
 
   return getSessionGroupById(id);
+}
+
+async function listSessionGroups() {
+  const rows = await allQuery(
+    `SELECT id,
+            school_name,
+            group_name,
+            pass_key,
+            allowed_modules,
+            created_at,
+            is_active
+       FROM session_groups
+      ORDER BY created_at DESC, lower(group_name) ASC`
+  );
+
+  return rows.map((row) => normalizeSessionGroupRow(row)).filter(Boolean);
 }
 
 async function getQuizConfig(options = {}) {
@@ -454,6 +540,8 @@ module.exports = {
   getSessionGroupById,
   getSessionGroupByPassKey,
   updateSessionGroupModules,
+  listSessionGroups,
+  normalizeSessionGroupRow,
   db,
   runQuery,
   getQuery,
